@@ -16,7 +16,6 @@ module wb2sram
         output reg ack_o,
         output wire err_o,
         output wire rty_o,
-        output wire stall_o,
         output reg [7:0] dat_o
     );
 
@@ -26,13 +25,12 @@ module wb2sram
 
     assign err_o = 1'b0;
     assign rty_o = 1'b0;
-    assign stall_o = 1'b0;
 
     always @ (posedge clk_i) begin
         if (rst_i) begin
             ack_o <= 1'b0;
         end else begin
-            if (cyc_i && stb_i) begin
+            if (cyc_i && stb_i && !ack_o) begin
                 if (we_i) begin
                     memory[adr_i] <= dat_i;
                 end else begin

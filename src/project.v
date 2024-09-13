@@ -30,7 +30,6 @@ module tt_um_levenshtein
     wire ack_i;
     wire err_i;
     wire rty_i;
-    wire stall_i;
     wire [7:0] dat_i;
 
     uart2wb uart(
@@ -47,7 +46,6 @@ module tt_um_levenshtein
         .ack_i(ack_i),
         .err_i(err_i),
         .rty_i(rty_i),
-        .stall_i(stall_i),
         .dat_i(dat_i)
     );
 
@@ -63,7 +61,6 @@ module tt_um_levenshtein
         .ack_o(ack_i),
         .err_o(err_i),
         .rty_o(rty_i),
-        .stall_o(stall_i),
         .dat_o(dat_i)
     );
 endmodule

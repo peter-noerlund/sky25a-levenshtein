@@ -6,6 +6,9 @@ fpga: tt/tt_tool.py venv/bin/activate
 harden: src/user_config.json
 	. venv/bin/activate && tt/tt_tool.py --openlane2 --harden
 
+png:
+	. venv/bin/activate && tt/tt_tool.py --openlane2 --create-png
+
 src/user_config.json: src/config.json
 	. venv/bin/activate && tt/tt_tool.py --openlane2 --create-user-config
 
@@ -19,4 +22,4 @@ venv/bin/activate:
 	python3 -m venv venv
 	./venv/bin/pip install -r tt/requirements.txt
 
-.PHONY: all fpga test
+.PHONY: all fpga test harden png

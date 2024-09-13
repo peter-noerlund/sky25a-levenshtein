@@ -4,20 +4,55 @@
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles
+from cocotb.triggers import Timer
+from cocotb.triggers import FallingEdge
+
+async def uart_transmit(dut, value):
+    dut.ui_in.value = 0
+
+    await Timer(320, units="ns")
+
+    for i in range(0, 8):
+        dut.ui_in.value = 0x00 if (value & (1 << i)) == 0 else 0x08
+
+        await Timer(320, units="ns")
+
+    dut.ui_in.value = 0x08
+
+    await Timer(320, units="ns")
+
+
+async def uart_receive(dut):
+    value = 0
+
+    await FallingEdge(dut.uo_out[4])
+
+    await Timer(480, units="ns")
+
+    for i in range(0, 8):
+        value = (value << 1) | (1 if dut.uo_out[4] else 0)
+
+        await Timer(320, units="ns")
+
+    assert dut.uo_out[4]
+
+    await Timer(120, units="ns")
+
+    return value
+            
 
 
 @cocotb.test()
 async def test_project(dut):
     dut._log.info("Start")
 
-    # Set the clock period to 10 us (100 KHz)
-    clock = Clock(dut.clk, 10, units="us")
+    clock = Clock(dut.clk, 20, units="ns")
     cocotb.start_soon(clock.start())
 
     # Reset
     dut._log.info("Reset")
     dut.ena.value = 1
-    dut.ui_in.value = 0
+    dut.ui_in.value = 0x08
     dut.uio_in.value = 0
     dut.rst_n.value = 0
     await ClockCycles(dut.clk, 10)
@@ -25,16 +60,16 @@ async def test_project(dut):
 
     dut._log.info("Test project behavior")
 
-    # Set the input values you want to test
-    dut.ui_in.value = 20
-    dut.uio_in.value = 30
+    await ClockCycles(dut.clk, 10)
 
-    # Wait for one clock cycle to see the output values
-    await ClockCycles(dut.clk, 1)
+    await uart_transmit(dut, 0x80)
+    await uart_transmit(dut, 0x00)
+    await uart_transmit(dut, 0x00)
+    await uart_transmit(dut, 0xFF)
+    await Timer(10, units="us")
 
-    # The following assersion is just an example of how to check the output values.
-    # Change it to match the actual expected output of your module:
-    assert dut.uo_out.value == 50
-
-    # Keep testing the module by changing the input values, waiting for
-    # one or more clock cycles, and asserting the expected output values.
+    await uart_transmit(dut, 0x00)
+    await uart_transmit(dut, 0x00)
+    await uart_transmit(dut, 0x00)
+    await uart_transmit(dut, 0x00)
+    await Timer(10, units="us")
