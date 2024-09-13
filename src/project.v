@@ -17,10 +17,11 @@ module tt_um_levenshtein
         input  wire       rst_n     // reset_n - low to reset
     );
 
-    assign uio_oe = 8'b00000000;
-    assign uio_out = 8'b00000000;
     assign uo_out[7:5] = 3'b000;
     assign uo_out[3:0] = 4'b0000;
+    assign uio_oe = 8'b00001011;
+    assign uio_out[2] = 1'b0;
+    assign uio_out[7:4] = 4'b0000;
 
     wire cyc_o;
     wire stb_o;
@@ -35,6 +36,7 @@ module tt_um_levenshtein
     uart2wb uart(
         .clk_i(clk),
         .rst_i(!rst_n),
+
         .uart_rxd(ui_in[3]),
         .uart_txd(uo_out[4]),
 
@@ -49,13 +51,18 @@ module tt_um_levenshtein
         .dat_i(dat_i)
     );
 
-    wb2sram #(.ADDR_WIDTH(2)) sram(
+    wb2spi sram(
         .clk_i(clk),
         .rst_i(!rst_n),
+
+        .sck(uio_out[3]),
+        .mosi(uio_out[1]),
+        .miso(uio_in[2]),
+        .ss_n(uio_out[0]),
         
         .cyc_i(cyc_o),
         .stb_i(stb_o),
-        .adr_i(adr_o[1:0]),
+        .adr_i(adr_o),
         .dat_i(dat_o),
         .we_i(we_o),
         .ack_o(ack_i),

@@ -1,4 +1,3 @@
-`timescale 1ns/1ps
 `default_nettype none
 
 module uart2wb
@@ -59,7 +58,7 @@ module uart2wb
             state <= STATE_READ_UART_SYNC;
             bit_counter <= 3'd0;
             byte_counter <= 2'd0;
-            clk_counter <= 5'd0;
+            clk_counter <= 4'd0;
             cyc <= 1'b0;
             buffer <= 32'h00000000;
             uart_txd <= 1'b1;
@@ -102,7 +101,7 @@ module uart2wb
                         end
                         byte_counter <= byte_counter + 2'd1;
                     end
-                    clk_counter <= clk_counter + 5'd1;
+                    clk_counter <= clk_counter + 4'd1;
                 end
 
                 STATE_WISHBONE: begin
