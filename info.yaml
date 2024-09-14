@@ -5,7 +5,7 @@ project:
   discord:      "pchri03."      # Your discord username, for communication and automatically assigning you a Tapeout role (optional)
   description:  "A levenshtein based fuzzy search engine"      # One line description of what your project does
   language:     "Verilog" # other examples include SystemVerilog, Amaranth, VHDL, etc
-  clock_hz:     50       # Clock frequency in Hz (or 0 if not applicable)
+  clock_hz:     50000000 # Clock frequency in Hz (or 0 if not applicable)
 
   # How many tiles your design occupies? A single tile is about 167x108 uM.
   tiles: "1x1"          # Valid values: 1x1, 1x2, 2x2, 3x2, 4x2, 6x2 or 8x2
@@ -19,7 +19,7 @@ project:
   source_files:
     - tt_um_levenshtein.v
     - uart2wb.sv
-    - wb2spi.sv
+    - spi_controller.sv
 
 # The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.
 pinout:
@@ -44,14 +44,14 @@ pinout:
   uo[7]: ""
 
   # Bidirectional pins
-  uio[0]: "QQSPI PSRAM PMOD SS#"
-  uio[1]: "QQSPI PSRAM PMOD MOSI/SIO0"
-  uio[2]: "QQSPI PSRAM PMOD MISO/SIO1"
-  uio[3]: "QQSPI PSRAM PMOD SCK"
-  uio[4]: "QQSPI PSRAM PMOD SIO2"
-  uio[5]: "QQSPI PSRAM PMOD SIO3"
-  uio[6]: "QQSPI PSRAM PMOD CS0"
-  uio[7]: "QQSPI PSRAM PMOD CS1"
+  uio[0]: "SPI SS#"
+  uio[1]: "SPI MOSI"
+  uio[2]: "SPI MISO"
+  uio[3]: "SCK"
+  uio[4]: ""
+  uio[5]: ""
+  uio[6]: ""
+  uio[7]: ""
 
 # Do not change!
 yaml_version: 6

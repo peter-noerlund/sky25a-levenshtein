@@ -3,7 +3,79 @@
 
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import ClockCycles, FallingEdge, Timer
+from cocotb.triggers import ClockCycles, Edge, FallingEdge, Timer
+
+
+async def spi_sram(dut):
+    bit_pos = 0
+    byte = 0
+
+    byte_pos = 0
+    command = 0
+    address = 0
+    data = 0
+
+    queue = 0
+
+    memory = dict()
+
+    old_ss_n = int(dut.uio_out[0]) if dut.uio_oe[0] else 0
+    old_sck = int(dut.uio_out[3]) if dut.uio_oe[3] else 0
+    while True:
+        await Edge(dut.clk)
+
+        ss_n = int(dut.uio_out[0]) if dut.uio_oe[0] else 0
+        sck = int(dut.uio_out[3]) if dut.uio_oe[3] else 0
+
+        if old_ss_n and not ss_n:
+            # Falling edge on SS#
+            bit_pos = 0
+            byte = 0
+
+            byte_pos = 0
+            command = 0
+            address = 0
+            data = 0
+
+            queue = 0
+
+        if not ss_n and not old_sck and sck:
+            # Rising edge on SCK
+            byte = ((byte << 1) + (int(dut.uio_out[1]) if dut.uio_oe[1] else 0)) & 0xFF
+            bit_pos = bit_pos + 1
+            if bit_pos == 8:
+                if byte_pos == 0:
+                    command = byte
+                    assert command == 0x02 or command == 0x03
+                elif byte_pos == 1:
+                    address = byte << 16
+                elif byte_pos == 2:
+                    address = address | (byte << 8)
+                elif byte_pos == 3:
+                    address = address | byte
+                    if command == 0x03:
+                        queue = memory[address] if address in memory else 0
+                else:
+
+                    if command == 0x02:
+                        memory[address] = byte
+
+                    address = address + 1
+
+                    if command == 0x03:
+                        queue = memory[address] if address in memory else 0
+                    else:
+                        queue = 0
+
+                byte_pos = byte_pos + 1
+                bit_pos = 0
+        
+        if not ss_n and old_sck and not sck:
+            dut.uio_in.value = (int(dut.uio_in) & ~0x04) | (0x04 if queue & 0x80 == 0x80 else 0x00)
+            queue = (queue << 1) & 0xFF
+
+        old_ss_n = ss_n
+        old_sck = sck
 
 
 async def uart_transmit(dut, value, period=320, period_units="ns"):
@@ -36,7 +108,7 @@ async def uart_receive(dut, max_clock_cycles=10000, period=320, period_units="ns
     await Timer(period * 1.5, units=period_units)
 
     for i in range(0, 8):
-        value = (value << 1) | (1 if dut.uo_out[4] == 1 else 0)
+        value = value | (1 << i if dut.uo_out[4] == 1 else 0)
 
         await Timer(period, units=period_units)
 
@@ -70,6 +142,7 @@ async def test_project(dut):
     clock = Clock(dut.clk, 20, units="ns")
     cocotb.start_soon(clock.start())
 
+
     # Reset
     dut._log.info("Reset")
     dut.ena.value = 1
@@ -78,6 +151,8 @@ async def test_project(dut):
     dut.rst_n.value = 0
     await ClockCycles(dut.clk, 10)
     dut.rst_n.value = 1
+
+    await cocotb.start(spi_sram(dut))
 
     dut._log.info("Test project behavior")
 
@@ -88,7 +163,7 @@ async def test_project(dut):
     await wb_write(dut, 2, 0xBE)
     await wb_write(dut, 3, 0xEF)
 
-    await wb_read(dut, 0)
-    await wb_read(dut, 1)
-    await wb_read(dut, 2)
-    await wb_read(dut, 3)
+    assert await wb_read(dut, 0) == 0xDE
+    assert await wb_read(dut, 1) == 0xAD
+    assert await wb_read(dut, 2) == 0xBE
+    assert await wb_read(dut, 3) == 0xEF

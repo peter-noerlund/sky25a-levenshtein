@@ -120,6 +120,8 @@ module uart2wb
                 STATE_WRITE_UART_START_BIT: begin
                     if (clk_counter == 4'd15) begin
                         state <= STATE_WRITE_UART_DATA_BITS;
+                        uart_txd <= buffer[0];
+                        buffer[6:0] <= buffer[7:1];
                     end
                     clk_counter <= clk_counter + 4'd1;
                 end
@@ -127,8 +129,8 @@ module uart2wb
                 STATE_WRITE_UART_DATA_BITS: begin
                     if (clk_counter == 4'd15) begin
                         
-                        uart_txd <= buffer[7];
-                        buffer[7:1] <= buffer[6:0];
+                        uart_txd <= buffer[0];
+                        buffer[6:0] <= buffer[7:1];
 
                         if (bit_counter == 3'd7) begin
                             state <= STATE_WRITE_UART_STOP_BIT;

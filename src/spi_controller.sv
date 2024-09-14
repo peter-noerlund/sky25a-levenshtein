@@ -51,13 +51,14 @@ module spi_controller
                     end else if (bit_counter == 6'd8) begin
                         mosi <= 1'b0; // Address bit 23
                     end else if (bit_counter >= 6'd9 && bit_counter <= 6'd30) begin
-                        mosi <= adr_i[5'(bit_counter - 6'd9)];
+                        mosi <= adr_i[5'd21 - 5'(bit_counter - 6'd9)];
                     end else if (bit_counter >= 6'd31 && bit_counter <= 6'd38) begin
                         mosi <= dat_i[3'd7 - 3'(bit_counter - 6'd31)];
                         dat_o <= {dat_o[6:0], miso};
                     end else if (bit_counter == 6'd39) begin
                         ack_o <= 1'b1;
                         mosi <= 1'b0;
+                        dat_o <= {dat_o[6:0], miso};
                     end
                     bit_counter <= bit_counter + 6'd1;
                 end
