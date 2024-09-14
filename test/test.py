@@ -6,19 +6,19 @@ from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles, FallingEdge, Timer
 
 
-async def uart_transmit(dut, value):
+async def uart_transmit(dut, value, period=320, period_units="ns"):
     dut.ui_in.value = 0
 
-    await Timer(320, units="ns")
+    await Timer(period, units=period_units)
 
     for i in range(0, 8):
         dut.ui_in.value = 0x00 if (value & (1 << i)) == 0 else 0x08
 
-        await Timer(320, units="ns")
+        await Timer(period, units=period_units)
 
     dut.ui_in.value = 0x08
 
-    await Timer(320, units="ns")
+    await Timer(period, units=period_units)
 
 
 async def uart_receive(dut, max_clock_cycles=10000, period=320, period_units="ns"):
