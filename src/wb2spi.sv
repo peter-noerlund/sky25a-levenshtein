@@ -55,6 +55,7 @@ module wb2spi
                         dat_o <= {dat_o[6:0], miso};
                     end else if (bit_counter == 6'd40) begin
                         ss_n <= 1'b0;
+                        ack_o <= 1'b1;
                     end
                     bit_counter <= bit_counter + 6'd1;
                 end
