@@ -21,9 +21,6 @@ module wb2spi
         output reg ss_n
     );
 
-    // READ  = 03 AA AA AA DD
-    // WRITE = 02 AA AA AA DD
-
     assign err_o = 1'b0;
     assign rty_o = 1'b0;
 
@@ -35,27 +32,32 @@ module wb2spi
             ss_n <= 1'b1;
             sck <= 1'b0;
             bit_counter <= 6'd0;
+            mosi <= 1'b0;
         end else begin
             if (cyc_i && stb_i && !ack_o) begin
                 ss_n <= 1'b0;
-                sck <= ~sck;
-                if (!sck) begin
-                    if (bit_counter <= 6'd5) begin
+                if (!ss_n) begin
+                    sck <= ~sck;
+                end
+                if (sck) begin
+                    if (bit_counter <= 6'd4) begin
                         mosi <= 1'b0;
-                    end else if (bit_counter == 6'd6) begin
+                    end else if (bit_counter == 6'd5) begin
                         mosi <= 1'b1;
-                    end else if (bit_counter == 6'd7) begin
+                    end else if (bit_counter == 6'd6) begin
                         mosi <= !we_i;                        
-                    end else if (bit_counter == 6'd8) begin
+                    end else if (bit_counter == 6'd7) begin
                         mosi <= 1'b0;
-                    end else if (bit_counter >= 6'd9 && bit_counter <= 6'd31) begin
+                    end else if (bit_counter == 6'd8) begin
+                        mosi <= 1'b0; // Address bit 23
+                    end else if (bit_counter >= 6'd9 && bit_counter <= 6'd30) begin
                         mosi <= adr_i[5'(bit_counter - 6'd9)];
-                    end else if (bit_counter >= 6'd32 && bit_counter <= 6'd39) begin
-                        mosi <= dat_i[3'(bit_counter - 6'd32)];
+                    end else if (bit_counter >= 6'd31 && bit_counter <= 6'd38) begin
+                        mosi <= dat_i[3'd7 - 3'(bit_counter - 6'd31)];
                         dat_o <= {dat_o[6:0], miso};
-                    end else if (bit_counter == 6'd40) begin
-                        ss_n <= 1'b0;
+                    end else if (bit_counter == 6'd39) begin
                         ack_o <= 1'b1;
+                        mosi <= 1'b0;
                     end
                     bit_counter <= bit_counter + 6'd1;
                 end
