@@ -6,6 +6,7 @@
 `default_nettype none
 
 module tt_um_levenshtein
+    /* verilator lint_off UNUSEDSIGNAL */
     (
         input  wire [7:0] ui_in,    // Dedicated inputs
         output wire [7:0] uo_out,   // Dedicated outputs
@@ -16,6 +17,7 @@ module tt_um_levenshtein
         input  wire       clk,      // clock
         input  wire       rst_n     // reset_n - low to reset
     );
+    /* verilator lint_on UNUSEDSIGNAL */
 
     assign uo_out[7:5] = 3'b000;
     assign uo_out[3:0] = 4'b0000;

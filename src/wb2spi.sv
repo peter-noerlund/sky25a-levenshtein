@@ -27,7 +27,7 @@ module wb2spi
     assign err_o = 1'b0;
     assign rty_o = 1'b0;
 
-    reg [6:0] bit_counter;
+    reg [5:0] bit_counter;
 
     always @ (posedge clk_i) begin
         if (rst_i) begin
@@ -40,7 +40,7 @@ module wb2spi
                 ss_n <= 1'b0;
                 sck <= ~sck;
                 if (!sck) begin
-                    if (bit_counter >= 6'd0 && bit_counter <= 6'd5) begin
+                    if (bit_counter <= 6'd5) begin
                         mosi <= 1'b0;
                     end else if (bit_counter == 6'd6) begin
                         mosi <= 1'b1;
@@ -49,9 +49,9 @@ module wb2spi
                     end else if (bit_counter == 6'd8) begin
                         mosi <= 1'b0;
                     end else if (bit_counter >= 6'd9 && bit_counter <= 6'd31) begin
-                        mosi <= adr_i[bit_counter - 5'd9];
+                        mosi <= adr_i[5'(bit_counter - 6'd9)];
                     end else if (bit_counter >= 6'd32 && bit_counter <= 6'd39) begin
-                        mosi <= dat_i[bit_counter - 5'd32];
+                        mosi <= dat_i[3'(bit_counter - 6'd32)];
                         dat_o <= {dat_o[6:0], miso};
                     end else if (bit_counter == 6'd40) begin
                         ss_n <= 1'b0;

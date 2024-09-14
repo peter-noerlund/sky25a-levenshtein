@@ -1,0 +1,78 @@
+cmake_minimum_required(VERSION 3.16)
+
+project(tt09-levenshtein LANGUAGES CXX)
+
+find_package(verilator REQUIRED)
+find_package(Git REQUIRED)
+find_package(Python COMPONENTS Interpreter REQUIRED)
+
+add_executable(tt09-levenshtein
+    sim/main.cpp
+)
+target_include_directories(tt09-levenshtein PRIVATE sim)
+target_compile_features(tt09-levenshtein PRIVATE cxx_std_20)
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    target_compile_options(tt09-levenshtein PRIVATE -Wall -W -Wextra -Wno-unused-parameter -Wno-unused-variable -Wno-sign-compare $<$<CONFIG:Release>:-march=native -flto>)
+endif()
+target_link_libraries(tt09-levenshtein PRIVATE $<$<CONFIG:Release>:-flto>)
+
+verilate(tt09-levenshtein
+    TOP_MODULE tt_um_levenshtein
+    OPT_FAST "-O3 -march=native -flto"
+    VERILATOR_ARGS -Wall -I${CMAKE_CURRENT_SOURCE_DIR}/src
+    SOURCES
+    src/tt_um_levenshtein.v
+    src/uart2wb.sv
+    src/wb2spi.sv
+)
+
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/src/user_config.json
+    COMMAND . venv/bin/activate && tt/tt_tool.py --openlane2 --create-user-config
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/config.json ${CMAKE_CURRENT_SOURCE_DIR}/info.yaml ${CMAKE_CURRENT_SOURCE_DIR}/tt/tt_tool.py
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/tt/tt_tool.py
+    COMMAND ${GIT_EXECUTABLE} clone -b tt08 https://github.com/TinyTapeout/tt-support-tools tt
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/venv/bin/python
+    COMMAND ${Python_EXECUTABLE} -m venv venv
+    COMMAND venv/bin/pip install --upgrade pip
+    COMMAND venv/bin/pip install -r tt/requirements.txt
+    COMMAND venv/bin/pip install openlane==2.0.8
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tt/tt_tool.py
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+add_custom_target(
+    fpga-bitstream
+    COMMAND . venv/bin/activate && tt/tt_tool.py --create-fpga-bitstream
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tt/tt_tool.py ${CMAKE_CURRENT_SOURCE_DIR}/venv/bin/python
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+add_custom_target(
+    harden
+    COMMAND . venv/bin/activate && tt/tt_tool.py --openlane2 --harden
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/user_config.json ${CMAKE_CURRENT_SOURCE_DIR}/tt/tt_tool.py ${CMAKE_CURRENT_SOURCE_DIR}/venv/bin/python
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+add_custom_target(
+    create-png
+    COMMAND . venv/bin/activate && tt/tt_tool.py --openlane2 --create-png
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tt/tt_tool.py ${CMAKE_CURRENT_SOURCE_DIR}/venv/bin/python
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+add_custom_target(
+    test
+    COMMAND . ../venv/bin/activate && make -B
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tt/tt_tool.py ${CMAKE_CURRENT_SOURCE_DIR}/venv/bin/python
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/test
+)
