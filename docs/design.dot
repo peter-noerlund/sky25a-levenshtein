@@ -1,0 +1,43 @@
+digraph design {
+    splines=ortho;
+    nodesep=0.75;
+    ranksep=0.75;
+
+    node [ fontname="arial" fontsize="8" shape="rect" ];
+    edge [ fontname="arial" fontsize="8" ];
+
+    subgraph external {
+        rank=same;
+
+        rp2040 [ label="RP2040 Microcontroller\nor\nFT2232H USB Controller" ];
+        psram [ label="QQSPI PSRAM" ];
+    }
+
+    subgraph external_to_wb {
+        rank=same;
+
+        uart_to_wb [ label="UART controller\n(Wishbone Master)" ];
+        wb_to_qspi_sram [ label="(Q)SPI SRAM Controller\n(Wishbone Slave)"]
+    }
+
+    subgraph interconnect {
+        rank=same;
+
+        interconnect [ label="Wishbone Interconnect" ];
+    }
+
+    subgraph engine {
+        rank=same;
+
+        controller [ label="Levenshtein Controller\n(Wishbone Slave)" ];
+        engine [ label="Levenshtein Engine\n(Wishbone Master)" ];
+    }
+
+    rp2040 -> uart_to_wb [ dir="both" ];
+    uart_to_wb -> interconnect [ dir="both" ];
+    interconnect -> wb_to_qspi_sram [dir="both" ];
+    wb_to_qspi_sram -> psram [ dir="both" ];
+    interconnect -> controller [ dir="both" ];
+    interconnect -> engine [ dir="both" ];
+    controller -> engine;
+}
