@@ -1,6 +1,6 @@
 `default_nettype none
 
-module wb2spi
+module spi_controller
     (
         input wire clk_i,
         input wire rst_i,

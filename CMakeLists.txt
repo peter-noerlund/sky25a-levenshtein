@@ -23,7 +23,7 @@ verilate(tt09-levenshtein
     SOURCES
     src/tt_um_levenshtein.v
     src/uart2wb.sv
-    src/wb2spi.sv
+    src/spi_controller.sv
 )
 
 add_custom_command(

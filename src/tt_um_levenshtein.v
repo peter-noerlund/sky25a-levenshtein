@@ -53,7 +53,7 @@ module tt_um_levenshtein
         .dat_i(dat_i)
     );
 
-    wb2spi sram(
+    spi_controller sram(
         .clk_i(clk),
         .rst_i(!rst_n),
 
