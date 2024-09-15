@@ -42,32 +42,6 @@ module levenshtein_controller
     reg error;
     reg [2:0] word_length;
 
-    // Wishbone slave
-
-    assign wbs_err_o = 1'b0;
-    assign wbs_rty_o = 1'b0;
-    assign wbs_dat_o = {enabled, error, 3'b000, word_length};
-
-    always @ (posedge clk_i) begin: wb_slave
-        if (rst_i) begin
-            enabled <= 1'b0;
-            wbs_ack_o <= 1'b0;
-        end else begin
-            if (wbs_cyc_i && wbs_stb_i && !wbs_ack_o) begin
-                if (wbs_we_i) begin
-                    enabled <= wbs_dat_i[7];
-                    error <= 1'b0;
-                    word_length <= wbs_dat_i[2:0];
-                end
-                wbs_ack_o <= 1'b1;
-            end else begin
-                wbs_ack_o <= 1'b0;
-            end
-        end
-    end
-
-    // Wishbone master
-
     localparam STATE_READ_DICT = 2'd0;
     localparam STATE_READ_VECTOR = 2'd1;
     localparam STATE_LEVENSHTEIN = 2'd2;
@@ -83,73 +57,93 @@ module levenshtein_controller
     reg cyc;
     reg [3:0] d;
 
+    assign wbs_err_o = 1'b0;
+    assign wbs_rty_o = 1'b0;
+    assign wbs_dat_o = {enabled, error, 3'b000, word_length};
+
     assign wbm_cyc_o = cyc;
     assign wbm_stb_o = cyc;
     assign wbm_adr_o = (state == STATE_READ_DICT ? {1'b1, dict_address} : (state == STATE_READ_VECTOR ? MASTER_ADDR_WIDTH'(pm) : {2'b01, result_address}));
     assign wbm_we_o = (state == STATE_WRITE_RESULT);
     assign wbm_dat_o = {4'h0, d};
 
-    always @ (posedge clk_i) begin: wb_master
-        if (rst_i || !enabled) begin
+    always @ (posedge clk_i) begin
+        if (rst_i) begin
+            enabled <= 1'b0;
+            wbs_ack_o <= 1'b0;
+
             state <= STATE_READ_DICT;
             cyc <= 1'b0;
             dict_address <= DICT_ADDR_WIDTH'(0);
             result_address <= RESULT_ADDR_WIDTH'(0);
             d <= 4'd0;
         end else begin
-            case (state)
-                STATE_READ_DICT: begin
-                    if (!cyc) begin
-                        cyc <= 1'b1;
-                    end else if (wbm_ack_i) begin
-                        pm <= wbm_dat_i;
-                        if (wbm_dat_i[7] == 1'b1) begin
-                            state <= STATE_WRITE_RESULT;
-                        end else begin
-                            state <= STATE_READ_VECTOR;
-                        end
-                        cyc <= 1'b0;
-                        dict_address <= dict_address + DICT_ADDR_WIDTH'(1);
-                    end else if (wbm_err_i || wbm_rty_i) begin
-                        enabled <= 1'b0;
-                        error <= 1'b1;
-                    end
+            if (wbs_cyc_i && wbs_stb_i && !wbs_ack_o) begin
+                if (wbs_we_i) begin
+                    enabled <= wbs_dat_i[7];
+                    error <= 1'b0;
+                    word_length <= wbs_dat_i[2:0];
                 end
-
-                STATE_READ_VECTOR: begin
-                    if (!cyc) begin
-                        cyc <= 1'b1;
-                    end else if (wbm_ack_i) begin
-                        pm <= wbm_dat_i;
-                        cyc <= 1'b0;
-                        state <= STATE_LEVENSHTEIN;
-                    end else if (wbm_err_i || wbm_rty_i) begin
-                        enabled <= 1'b0;
-                        error <= 1'b1;
-                    end
-                end
-
-                STATE_LEVENSHTEIN: begin
-                    state <= STATE_READ_DICT;
-                end
-
-                STATE_WRITE_RESULT: begin
-                    if (!cyc) begin
-                        cyc <= 1'b1;
-                    end else if (wbm_ack_i) begin
-                        result_address <= result_address + RESULT_ADDR_WIDTH'(1);
-                        cyc <= 1'b0;
-                        d <= pm[3:0];
-                        if (pm == 8'hFF) begin
+                wbs_ack_o <= 1'b1;
+            end else begin
+                wbs_ack_o <= 1'b0;
+            end
+        
+            if (enabled) begin
+                case (state)
+                    STATE_READ_DICT: begin
+                        if (!cyc) begin
+                            cyc <= 1'b1;
+                        end else if (wbm_ack_i) begin
+                            pm <= wbm_dat_i;
+                            if (wbm_dat_i[7] == 1'b1) begin
+                                state <= STATE_WRITE_RESULT;
+                            end else begin
+                                state <= STATE_READ_VECTOR;
+                            end
+                            cyc <= 1'b0;
+                            dict_address <= dict_address + DICT_ADDR_WIDTH'(1);
+                        end else if (wbm_err_i || wbm_rty_i) begin
                             enabled <= 1'b0;
+                            error <= 1'b1;
                         end
-                        state <= STATE_READ_DICT;
-                    end else if (wbm_err_i || wbm_rty_i) begin
-                        enabled <= 1'b0;
-                        error <= 1'b1;
                     end
-                end
-            endcase
+
+                    STATE_READ_VECTOR: begin
+                        if (!cyc) begin
+                            cyc <= 1'b1;
+                        end else if (wbm_ack_i) begin
+                            pm <= wbm_dat_i;
+                            cyc <= 1'b0;
+                            state <= STATE_LEVENSHTEIN;
+                        end else if (wbm_err_i || wbm_rty_i) begin
+                            enabled <= 1'b0;
+                            error <= 1'b1;
+                        end
+                    end
+
+                    STATE_LEVENSHTEIN: begin
+                        state <= STATE_READ_DICT;
+                    end
+
+                    STATE_WRITE_RESULT: begin
+                        if (!cyc) begin
+                            cyc <= 1'b1;
+                        end else if (wbm_ack_i) begin
+                            result_address <= result_address + RESULT_ADDR_WIDTH'(1);
+                            cyc <= 1'b0;
+                            d <= pm[3:0];
+                            if (pm == 8'hFF) begin
+                                enabled <= 1'b0;
+                            end
+                            state <= STATE_READ_DICT;
+                        end else if (wbm_err_i || wbm_rty_i) begin
+                            enabled <= 1'b0;
+                            error <= 1'b1;
+                        end
+                    end
+                endcase
+            end
         end
     end
 endmodule

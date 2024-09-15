@@ -18,7 +18,7 @@ project:
   # Don't forget to also update `PROJECT_SOURCES` in test/Makefile.
   source_files:
     - tt_um_levenshtein.v
-    - engine_controller.sv
+    - levenshtein_controller.sv
     - uart2wb.sv
     - spi_controller.sv
     - wb_arbiter.sv
