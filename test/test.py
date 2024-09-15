@@ -163,8 +163,15 @@ async def test_project(dut):
 
     await ClockCycles(dut.clk, 10)
 
+    CTRL_ADDR = 0x000000
+    MASK_ADDR = 0x000001
+    VP_ADDR = 0x000002
+    DICT_ADDR_BASE = 0x600000
+    BITVECTOR_ADDR_BASE = 0x400000
+    RESULT_ADDR_BASE = 0x500000
+
     words = ["hest", "bil"]
-    address = 0x600000
+    address = DICT_ADDR_BASE
     for word in words:
         await wb_write(dut, address, 0x80 | len(word))
         address = address + 1
@@ -174,12 +181,14 @@ async def test_project(dut):
     await wb_write(dut, address, 0xFF)
 
     # word = fest
-    await wb_write(dut, 0x400000 + ord("f"), 0x01)
-    await wb_write(dut, 0x400000 + ord("e"), 0x02)
-    await wb_write(dut, 0x400000 + ord("s"), 0x04)
-    await wb_write(dut, 0x400000 + ord("t"), 0x08)
+    await wb_write(dut, BITVECTOR_ADDR_BASE + ord("f"), 0x01)
+    await wb_write(dut, BITVECTOR_ADDR_BASE + ord("e"), 0x02)
+    await wb_write(dut, BITVECTOR_ADDR_BASE + ord("s"), 0x04)
+    await wb_write(dut, BITVECTOR_ADDR_BASE + ord("t"), 0x08)
 
-    await wb_write(dut, 0x000000, 0x84)
+    await wb_write(dut, MASK_ADDR, 0x0F)
+    await wb_write(dut, VP_ADDR, 0x07)
+    await wb_write(dut, CTRL_ADDR, 0x84)
 
     for i in range(0, 2):
         await Timer(10, units="us")

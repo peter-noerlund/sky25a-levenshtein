@@ -3,7 +3,9 @@
 module levenshtein_controller
     #(
         parameter MASTER_ADDR_WIDTH=24,
-        parameter SLAVE_ADDR_WIDTH=24
+        parameter SLAVE_ADDR_WIDTH=24,
+        parameter BITVECTOR_WIDTH=8,
+        parameter DISTANCE_WIDTH=8
     )
     (
         input wire clk_i,
@@ -28,9 +30,7 @@ module levenshtein_controller
         input wire [SLAVE_ADDR_WIDTH - 1 : 0] wbs_adr_i,
         /* verilator lint_on UNUSEDSIGNAL */
         input wire wbs_we_i,
-        /* verilator lint_off UNUSEDSIGNAL */
         input wire [7:0] wbs_dat_i,
-        /* verilator lint_on UNUSEDSIGNAL */
         output reg wbs_ack_o,
         output wire wbs_err_o,
         output wire wbs_rty_o,
@@ -41,6 +41,8 @@ module levenshtein_controller
     reg enabled;
     reg error;
     reg [2:0] word_length;
+    reg [BITVECTOR_WIDTH - 1 : 0] mask;
+    reg [BITVECTOR_WIDTH - 1 : 0] initial_vp;
 
     localparam STATE_READ_DICT = 2'd0;
     localparam STATE_READ_VECTOR = 2'd1;
@@ -53,9 +55,14 @@ module levenshtein_controller
     reg [1:0] state;
     reg [DICT_ADDR_WIDTH - 1 : 0] dict_address;
     reg [RESULT_ADDR_WIDTH - 1 : 0] result_address;
-    reg [7:0] pm;
     reg cyc;
-    reg [3:0] d;
+    reg [BITVECTOR_WIDTH - 1 : 0] pm;
+    wire [BITVECTOR_WIDTH - 1 : 0] d0;
+    wire [BITVECTOR_WIDTH - 1 : 0] hp;
+    wire [BITVECTOR_WIDTH - 1 : 0] hn;
+    reg [BITVECTOR_WIDTH - 1 : 0] vp;
+    reg [BITVECTOR_WIDTH - 1 : 0] vn;
+    reg [DISTANCE_WIDTH - 1 : 0] d;
 
     assign wbs_err_o = 1'b0;
     assign wbs_rty_o = 1'b0;
@@ -65,8 +72,12 @@ module levenshtein_controller
     assign wbm_stb_o = cyc;
     assign wbm_adr_o = (state == STATE_READ_DICT ? {1'b1, dict_address} : (state == STATE_READ_VECTOR ? MASTER_ADDR_WIDTH'(pm) : {2'b01, result_address}));
     assign wbm_we_o = (state == STATE_WRITE_RESULT);
-    assign wbm_dat_o = {4'h0, d};
+    assign wbm_dat_o = wbs_adr_i[0] == 1'b0 ? 8'(d) : 8'(mask);
 
+    assign d0 = (((pm & vp) + vp) ^ vp) | pm | vn;
+    assign hp = vn | ~(d0 | vp);
+    assign hn = d0 & vp;
+    
     always @ (posedge clk_i) begin
         if (rst_i) begin
             enabled <= 1'b0;
@@ -76,13 +87,24 @@ module levenshtein_controller
             cyc <= 1'b0;
             dict_address <= DICT_ADDR_WIDTH'(0);
             result_address <= RESULT_ADDR_WIDTH'(0);
-            d <= 4'd0;
+            d <= DISTANCE_WIDTH'(0);
+            vp <= BITVECTOR_WIDTH'(0);
+            vn <= BITVECTOR_WIDTH'(0);
         end else begin
             if (wbs_cyc_i && wbs_stb_i && !wbs_ack_o) begin
                 if (wbs_we_i) begin
-                    enabled <= wbs_dat_i[7];
-                    error <= 1'b0;
-                    word_length <= wbs_dat_i[2:0];
+                    case (wbs_adr_i[1:0])
+                        2'd0: begin
+                            enabled <= wbs_dat_i[7];
+                            error <= 1'b0;
+                            word_length <= wbs_dat_i[2:0];
+                        end
+
+                        2'd1: mask <= wbs_dat_i;
+                        2'd2: initial_vp <= wbs_dat_i;
+                        2'd3: begin
+                        end
+                    endcase
                 end
                 wbs_ack_o <= 1'b1;
             end else begin
@@ -123,6 +145,13 @@ module levenshtein_controller
                     end
 
                     STATE_LEVENSHTEIN: begin
+                        if ((hp & mask) != BITVECTOR_WIDTH'(0)) begin
+                            d <= d + DISTANCE_WIDTH'(1);
+                        end else if ((hn & mask) != BITVECTOR_WIDTH'(0)) begin
+                            d <= d - DISTANCE_WIDTH'(1);
+                        end
+                        vp <= (hn << 1) | ~(d0 | ((hp << 1) | BITVECTOR_WIDTH'(1)));
+                        vn <= d0 & ((hp << 1) | BITVECTOR_WIDTH'(1));
                         state <= STATE_READ_DICT;
                     end
 
@@ -132,7 +161,9 @@ module levenshtein_controller
                         end else if (wbm_ack_i) begin
                             result_address <= result_address + RESULT_ADDR_WIDTH'(1);
                             cyc <= 1'b0;
-                            d <= pm[3:0];
+                            d <= pm[DISTANCE_WIDTH - 1 : 0];
+                            vn <= BITVECTOR_WIDTH'(0);
+                            vp <= initial_vp;
                             if (pm == 8'hFF) begin
                                 enabled <= 1'b0;
                             end

@@ -93,7 +93,7 @@ module tt_um_levenshtein
         .dat_i(uart_drd)
     );
 
-    levenshtein_controller #(.MASTER_ADDR_WIDTH(22), .SLAVE_ADDR_WIDTH(22)) levenshtein_ctrl (
+    levenshtein_controller #(.MASTER_ADDR_WIDTH(22), .SLAVE_ADDR_WIDTH(22), .BITVECTOR_WIDTH(8), .DISTANCE_WIDTH(7)) levenshtein_ctrl (
         .clk_i(clk),
         .rst_i(!rst_n),
 
