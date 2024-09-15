@@ -73,6 +73,8 @@ async def spi_sram(dut):
         if not ss_n and old_sck and not sck:
             dut.uio_in.value = (int(dut.uio_in) & ~0x04) | (0x04 if queue & 0x80 == 0x80 else 0x00)
             queue = (queue << 1) & 0xFF
+        if ss_n:
+            dut.uio_in.value = int(dut.uio_in) & ~0x04
 
         old_ss_n = ss_n
         old_sck = sck
