@@ -24,6 +24,7 @@ verilate(tt09-levenshtein
     src/tt_um_levenshtein.v
     src/uart2wb.sv
     src/spi_controller.sv
+    src/wb_arbiter.sv
     src/wb_interconnect.sv
 )
 

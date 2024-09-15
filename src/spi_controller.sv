@@ -7,7 +7,7 @@ module spi_controller
 
         input wire cyc_i,
         input wire stb_i,
-        input wire [22:0] adr_i,
+        input wire [23:0] adr_i,
         input wire we_i,
         input wire [7:0] dat_i,
         output reg ack_o,
@@ -46,12 +46,8 @@ module spi_controller
                         mosi <= 1'b1;
                     end else if (bit_counter == 6'd6) begin
                         mosi <= !we_i;                        
-                    end else if (bit_counter == 6'd7) begin
-                        mosi <= 1'b0;
-                    end else if (bit_counter == 6'd8) begin
-                        mosi <= 1'b0; // Address bit 23
-                    end else if (bit_counter >= 6'd9 && bit_counter <= 6'd30) begin
-                        mosi <= adr_i[5'd21 - 5'(bit_counter - 6'd9)];
+                    end else if (bit_counter >= 6'd7 && bit_counter <= 6'd30) begin
+                        mosi <= adr_i[5'd23 - 5'(bit_counter - 6'd7)];
                     end else if (bit_counter >= 6'd31 && bit_counter <= 6'd38) begin
                         mosi <= dat_i[3'd7 - 3'(bit_counter - 6'd31)];
                         dat_o <= {dat_o[6:0], miso};

@@ -20,6 +20,8 @@ project:
     - tt_um_levenshtein.v
     - uart2wb.sv
     - spi_controller.sv
+    - wb_arbiter.sv
+    - wb_interconnect.sv
 
 # The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.
 pinout:
