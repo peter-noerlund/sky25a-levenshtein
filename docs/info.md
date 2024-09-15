@@ -11,6 +11,17 @@ You can also include images in this folder and reference them in the markdown. E
 
 Explain how your project works
 
+### Memory layout
+
+
+| Address  | Size | Description |
+|----------|------|-------------|
+| 0x000000 |   1B | Control     |
+| 0x400000 | 128B | Bitvectors  |
+| 0x500000 |  1MB | Results     |
+| 0x600000 |  2MB | Dictionary  |
+
+
 ## How to test
 
 Explain how to use your project

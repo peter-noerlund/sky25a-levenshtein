@@ -55,14 +55,17 @@ async def spi_sram(dut):
                     address = address | byte
                     if command == 0x03:
                         queue = memory[address] if address in memory else 0
+                        print(f"READ(0x{address:06x}) = 0x{queue:02x}")
                 else:
 
                     if command == 0x02:
+                        print(f"WRITE(0x{address:06x}, 0x{byte:02x})")
                         memory[address] = byte
 
                     address = address + 1
 
                     if command == 0x03:
+                        #print(f"READ(0x{address:06x}) = 0x{queue:02x}")
                         queue = memory[address] if address in memory else 0
                     else:
                         queue = 0
@@ -160,32 +163,36 @@ async def test_project(dut):
 
     await ClockCycles(dut.clk, 10)
 
-    await wb_write(dut, 0x400000, 0xDE)
-    await wb_write(dut, 0x400001, 0xAD)
-    await wb_write(dut, 0x400002, 0xBE)
-    await wb_write(dut, 0x400003, 0xEF)
+    words = ["hest", "bil"]
+    address = 0x600000
+    for word in words:
+        await wb_write(dut, address, 0x80 | len(word))
+        address = address + 1
+        for c in word:
+            await wb_write(dut, address, ord(c))
+            address = address + 1
+    await wb_write(dut, address, 0xFF)
 
-    assert await wb_read(dut, 0x400000) == 0xDE
-    assert await wb_read(dut, 0x400001) == 0xAD
-    assert await wb_read(dut, 0x400002) == 0xBE
-    assert await wb_read(dut, 0x400003) == 0xEF
+    # word = fest
+    await wb_write(dut, 0x400000 + ord("f"), 0x01)
+    await wb_write(dut, 0x400000 + ord("e"), 0x02)
+    await wb_write(dut, 0x400000 + ord("s"), 0x04)
+    await wb_write(dut, 0x400000 + ord("t"), 0x08)
 
-    await wb_write(dut, 0x000000, 0x00)
-    assert dut.user_project.engine_enabled == 0
-    assert dut.user_project.word_length == 0
-    assert await wb_read(dut, 0x000000) == 0x00
+    await wb_write(dut, 0x000000, 0x84)
 
-    await wb_write(dut, 0x000000, 0x04)
-    assert dut.user_project.engine_enabled == 0
-    assert dut.user_project.word_length == 4
-    assert await wb_read(dut, 0x00000000) == 0x04
+    for i in range(0, 2):
+        await Timer(10, units="us")
 
-    await wb_write(dut, 0x000000, 0x9F)
-    assert dut.user_project.engine_enabled == 1
-    assert dut.user_project.word_length == 31
-    assert await wb_read(dut, 0x00000000) == 0x9F
+        state = await wb_read(dut, 0x00000000)
+        if state & 0x80 == 0:
+            break
 
-    await wb_write(dut, 0x000000, 0xFF)
-    assert dut.user_project.engine_enabled == 1
-    assert dut.user_project.word_length == 31
-    assert await wb_read(dut, 0x00000000) == 0x9F
+    assert state & 0x80 == 0
+    assert state & 0x40 == 0
+
+    results = []
+    results = results + [await wb_read(dut, 0x500001)]
+    results = results + [await wb_read(dut, 0x500002)]
+
+    print(results)

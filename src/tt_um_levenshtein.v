@@ -20,30 +20,20 @@ module tt_um_levenshtein
     /* verilator lint_on UNUSEDSIGNAL */
 
     assign uo_out[7:5] = 3'b000;
-    assign uo_out[3:1] = 3'b000;
+    assign uo_out[3:0] = 4'b0000;
     assign uio_oe = 8'b00001011;
     assign uio_out[2] = 1'b0;
     assign uio_out[7:4] = 4'b0000;
 
-    wire uart1_cyc;
-    wire uart1_stb;
-    wire [22:0] uart1_adr;
-    wire [7:0] uart1_dwr;
-    wire uart1_we;
-    wire uart1_ack;
-    wire uart1_err;
-    wire uart1_rty;
-    wire [7:0] uart1_drd;
-
-    wire uart2_cyc;
-    wire uart2_stb;
-    wire [22:0] uart2_adr;
-    wire [7:0] uart2_dwr;
-    wire uart2_we;
-    wire uart2_ack;
-    wire uart2_err;
-    wire uart2_rty;
-    wire [7:0] uart2_drd;
+    wire uart_cyc;
+    wire uart_stb;
+    wire [22:0] uart_adr;
+    wire [7:0] uart_dwr;
+    wire uart_we;
+    wire uart_ack;
+    wire uart_err;
+    wire uart_rty;
+    wire [7:0] uart_drd;
 
     wire sram_cyc;
     wire sram_stb;
@@ -57,85 +47,78 @@ module tt_um_levenshtein
 
     /* verilator lint_off UNUSEDSIGNAL */
     wire sram_sel;
-    wire [2:0] sram_cti;
-    wire [1:0] sram_bte;
     /* verilator lint_on UNUSEDSIGNAL */
 
-    wire ctrl_cyc;
-    wire ctrl_stb;
-    wire [7:0] ctrl_dwr;
-    wire ctrl_we;
-    wire ctrl_ack;
-    wire ctrl_err;
-    wire ctrl_rty;
-    wire [7:0] ctrl_drd;
-
+    wire ctrl_master_cyc;
+    wire ctrl_master_stb;
+    wire [21:0] ctrl_master_adr;
+    wire ctrl_master_we;
+    wire [7:0] ctrl_master_dwr;
+    wire ctrl_master_ack;
+    wire ctrl_master_err;
+    wire ctrl_master_rty;
+    wire [7:0] ctrl_master_drd;
     /* verilator lint_off UNUSEDSIGNAL */
-    wire [21:0] ctrl_adr;
-    wire ctrl_sel;
-    wire [2:0] ctrl_cti;
-    wire [1:0] ctrl_bte;
+    wire ctrl_master_sel;
     /* verilator lint_on UNUSEDSIGNAL */
 
+    wire ctrl_slave_cyc;
+    wire ctrl_slave_stb;
+    wire [21:0] ctrl_slave_adr;
+    wire ctrl_slave_we;
+    wire [7:0] ctrl_slave_dwr;
+    wire ctrl_slave_ack;
+    wire ctrl_slave_err;
+    wire ctrl_slave_rty;
+    wire [7:0] ctrl_slave_drd;
     /* verilator lint_off UNUSEDSIGNAL */
-    wire engine_enabled;
-    wire [4:0] word_length;
+    wire ctrl_slave_sel;
     /* verilator lint_on UNUSEDSIGNAL */
 
-    uart2wb uart1(
+    uart2wb uart(
         .clk_i(clk),
         .rst_i(!rst_n),
 
         .uart_rxd(ui_in[3]),
         .uart_txd(uo_out[4]),
 
-        .cyc_o(uart1_cyc),
-        .stb_o(uart1_stb),
-        .adr_o(uart1_adr),
-        .dat_o(uart1_dwr),
-        .we_o(uart1_we),
-        .ack_i(uart1_ack),
-        .err_i(uart1_err),
-        .rty_i(uart1_rty),
-        .dat_i(uart1_drd)
+        .cyc_o(uart_cyc),
+        .stb_o(uart_stb),
+        .adr_o(uart_adr),
+        .dat_o(uart_dwr),
+        .we_o(uart_we),
+        .ack_i(uart_ack),
+        .err_i(uart_err),
+        .rty_i(uart_rty),
+        .dat_i(uart_drd)
     );
 
-    uart2wb uart2(
+    levenshtein_controller #(.MASTER_ADDR_WIDTH(22), .SLAVE_ADDR_WIDTH(22)) levenshtein_ctrl (
         .clk_i(clk),
         .rst_i(!rst_n),
 
-        .uart_rxd(ui_in[7]),
-        .uart_txd(uo_out[0]),
+        .wbm_cyc_o(ctrl_master_cyc),
+        .wbm_stb_o(ctrl_master_stb),
+        .wbm_adr_o(ctrl_master_adr[21:0]),
+        .wbm_we_o(ctrl_master_we),
+        .wbm_dat_o(ctrl_master_dwr),
+        .wbm_ack_i(ctrl_master_ack),
+        .wbm_err_i(ctrl_master_err),
+        .wbm_rty_i(ctrl_master_rty),
+        .wbm_dat_i(ctrl_master_drd),
 
-        .cyc_o(uart2_cyc),
-        .stb_o(uart2_stb),
-        .adr_o(uart2_adr),
-        .dat_o(uart2_dwr),
-        .we_o(uart2_we),
-        .ack_i(uart2_ack),
-        .err_i(uart2_err),
-        .rty_i(uart2_rty),
-        .dat_i(uart2_drd)
+        .wbs_cyc_i(ctrl_slave_cyc),
+        .wbs_stb_i(ctrl_slave_stb),
+        .wbs_adr_i(ctrl_slave_adr),
+        .wbs_we_i(ctrl_slave_we),
+        .wbs_dat_i(ctrl_slave_dwr),
+        .wbs_ack_o(ctrl_slave_ack),
+        .wbs_err_o(ctrl_slave_err),
+        .wbs_rty_o(ctrl_slave_rty),
+        .wbs_dat_o(ctrl_slave_drd)
     );
 
-    engine_controller ctrl(
-        .clk_i(clk),
-        .rst_i(!rst_n),
-
-        .cyc_i(ctrl_cyc),
-        .stb_i(ctrl_stb),
-        .dat_i(ctrl_dwr),
-        .we_i(ctrl_we),
-        .ack_o(ctrl_ack),
-        .err_o(ctrl_err),
-        .rty_o(ctrl_rty),
-        .dat_o(ctrl_drd),
-
-        .enabled(engine_enabled),
-        .word_length(word_length)
-    );
-
-    spi_controller sram(
+    spi_controller spi_ctrl(
         .clk_i(clk),
         .rst_i(!rst_n),
 
@@ -160,44 +143,38 @@ module tt_um_levenshtein
         .clk_i(clk),
         .rst_i(!rst_n),
 
-        .wbm0_cyc_i(uart1_cyc),
-        .wbm0_stb_i(uart1_stb),
-        .wbm0_adr_i(uart1_adr),
-        .wbm0_we_i(uart1_we),
+        .wbm0_cyc_i(uart_cyc),
+        .wbm0_stb_i(uart_stb),
+        .wbm0_adr_i(uart_adr),
+        .wbm0_we_i(uart_we),
         .wbm0_sel_i(1'b0),
-        .wbm0_dat_i(uart1_dwr),
-        .wbm0_cti_i(3'b000),
-        .wbm0_bte_i(2'b00),
-        .wbm0_ack_o(uart1_ack),
-        .wbm0_err_o(uart1_err),
-        .wbm0_rty_o(uart1_rty),
-        .wbm0_dat_o(uart1_drd),
+        .wbm0_dat_i(uart_dwr),
+        .wbm0_ack_o(uart_ack),
+        .wbm0_err_o(uart_err),
+        .wbm0_rty_o(uart_rty),
+        .wbm0_dat_o(uart_drd),
 
-        .wbm1_cyc_i(uart2_cyc),
-        .wbm1_stb_i(uart2_stb),
-        .wbm1_adr_i(uart2_adr),
-        .wbm1_we_i(uart2_we),
+        .wbm1_cyc_i(ctrl_master_cyc),
+        .wbm1_stb_i(ctrl_master_stb),
+        .wbm1_adr_i({1'b1, ctrl_master_adr}),
+        .wbm1_we_i(ctrl_master_we),
         .wbm1_sel_i(1'b0),
-        .wbm1_dat_i(uart2_dwr),
-        .wbm1_cti_i(3'b000),
-        .wbm1_bte_i(2'b00),
-        .wbm1_ack_o(uart2_ack),
-        .wbm1_err_o(uart2_err),
-        .wbm1_rty_o(uart2_rty),
-        .wbm1_dat_o(uart2_drd),
+        .wbm1_dat_i(ctrl_master_dwr),
+        .wbm1_ack_o(ctrl_master_ack),
+        .wbm1_err_o(ctrl_master_err),
+        .wbm1_rty_o(ctrl_master_rty),
+        .wbm1_dat_o(ctrl_master_drd),
 
-        .wbs0_cyc_o(ctrl_cyc),
-        .wbs0_stb_o(ctrl_stb),
-        .wbs0_adr_o(ctrl_adr),
-        .wbs0_we_o(ctrl_we),
-        .wbs0_sel_o(ctrl_sel),
-        .wbs0_dat_o(ctrl_dwr),
-        .wbs0_cti_o(ctrl_cti),
-        .wbs0_bte_o(ctrl_bte),
-        .wbs0_ack_i(ctrl_ack),
-        .wbs0_err_i(ctrl_err),
-        .wbs0_rty_i(ctrl_rty),
-        .wbs0_dat_i(ctrl_drd),
+        .wbs0_cyc_o(ctrl_slave_cyc),
+        .wbs0_stb_o(ctrl_slave_stb),
+        .wbs0_adr_o(ctrl_slave_adr),
+        .wbs0_we_o(ctrl_slave_we),
+        .wbs0_sel_o(ctrl_slave_sel),
+        .wbs0_dat_o(ctrl_slave_dwr),
+        .wbs0_ack_i(ctrl_slave_ack),
+        .wbs0_err_i(ctrl_slave_err),
+        .wbs0_rty_i(ctrl_slave_rty),
+        .wbs0_dat_i(ctrl_slave_drd),
 
         .wbs1_cyc_o(sram_cyc),
         .wbs1_stb_o(sram_stb),
@@ -205,8 +182,6 @@ module tt_um_levenshtein
         .wbs1_we_o(sram_we),
         .wbs1_sel_o(sram_sel),
         .wbs1_dat_o(sram_dwr),
-        .wbs1_cti_o(sram_cti),
-        .wbs1_bte_o(sram_bte),
         .wbs1_ack_i(sram_ack),
         .wbs1_err_i(sram_err),
         .wbs1_rty_i(sram_rty),

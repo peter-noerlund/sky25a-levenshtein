@@ -1,20 +1,20 @@
 [*]
 [*] GTKWave Analyzer v3.3.118 (w)1999-2023 BSI
-[*] Sun Sep 15 15:28:07 2024
+[*] Sun Sep 15 19:52:48 2024
 [*]
 [dumpfile] "/home/pch/Projects/tt09-levenshtein/test/tb.vcd"
-[dumpfile_mtime] "Sun Sep 15 15:25:36 2024"
-[dumpfile_size] 428220
+[dumpfile_mtime] "Sun Sep 15 19:49:12 2024"
+[dumpfile_size] 987896
 [savefile] "/home/pch/Projects/tt09-levenshtein/test/tb.gtkw"
 [timestart] 0
 [size] 3440 1337
 [pos] -1 -1
-*-23.634535 15820000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-25.134531 287520000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] tb.
 [treeopen] tb.user_project.
 [treeopen] tb.user_project.intercon.
 [sst_width] 297
-[signals_width] 358
+[signals_width] 443
 [sst_expanded] 1
 [sst_vpaned_height] 622
 @28
@@ -31,50 +31,60 @@ tb.user_project.rst_n
 -
 -PMOD SPI
 @28
-tb.user_project.sram.ss_n
-tb.user_project.sram.sck
-tb.user_project.sram.mosi
-@29
-tb.user_project.sram.miso
++{SCK} (4)tb.uio_out[7:0]
++{SS#} (7)tb.uio_out[7:0]
++{MOSI} (6)tb.uio_out[7:0]
++{MISO} (5)tb.uio_in[7:0]
 @200
 -
--Wishbone (UART)
+-UART (Wishbone)
 @28
-tb.user_project.uart1_cyc
-tb.user_project.uart1_stb
+tb.user_project.uart_cyc
+tb.user_project.uart_stb
 @22
-tb.user_project.uart1_adr[22:0]
+tb.user_project.uart_adr[22:0]
 @28
-tb.user_project.uart1_we
+tb.user_project.uart_we
 @22
-tb.user_project.uart1_dwr[7:0]
+tb.user_project.uart_dwr[7:0]
 @28
-tb.user_project.uart1_ack
-tb.user_project.uart1_err
-tb.user_project.uart1_rty
+tb.user_project.uart_ack
+tb.user_project.uart_err
+tb.user_project.uart_rty
 @22
-tb.user_project.uart1_drd[7:0]
+tb.user_project.uart_drd[7:0]
 @200
 -
--Wishbone (Controller)
+-Levenshtein (Wishbone Master)
 @28
-tb.user_project.ctrl_cyc
-tb.user_project.ctrl_stb
+tb.user_project.ctrl_master_cyc
+tb.user_project.ctrl_master_stb
 @22
-tb.user_project.ctrl_adr[21:0]
+tb.user_project.ctrl_master_adr[21:0]
 @28
-tb.user_project.ctrl_we
-@22
-tb.user_project.ctrl_dwr[7:0]
+tb.user_project.ctrl_master_we
+@c00022
+tb.user_project.ctrl_master_dwr[7:0]
 @28
-tb.user_project.ctrl_ack
-tb.user_project.ctrl_err
-tb.user_project.ctrl_rty
+(0)tb.user_project.ctrl_master_dwr[7:0]
+(1)tb.user_project.ctrl_master_dwr[7:0]
+(2)tb.user_project.ctrl_master_dwr[7:0]
+(3)tb.user_project.ctrl_master_dwr[7:0]
+(4)tb.user_project.ctrl_master_dwr[7:0]
+(5)tb.user_project.ctrl_master_dwr[7:0]
+(6)tb.user_project.ctrl_master_dwr[7:0]
+(7)tb.user_project.ctrl_master_dwr[7:0]
+@1401200
+-group_end
+@28
+tb.user_project.ctrl_master_ack
+tb.user_project.ctrl_master_err
+tb.user_project.ctrl_master_rty
 @22
-tb.user_project.ctrl_drd[7:0]
+tb.user_project.ctrl_master_drd[7:0]
 @200
 -
--Wishbone (SRAM)
+-SPI (Wishbone)
 @28
 tb.user_project.sram_cyc
 tb.user_project.sram_stb
@@ -90,5 +100,31 @@ tb.user_project.sram_err
 tb.user_project.sram_rty
 @22
 tb.user_project.sram_drd[7:0]
+@200
+-
+-Levenshtein (Wishbone slave)
+@28
+tb.user_project.ctrl_slave_cyc
+tb.user_project.ctrl_slave_stb
+@22
+tb.user_project.ctrl_slave_adr[21:0]
+@28
+tb.user_project.ctrl_slave_we
+@22
+tb.user_project.ctrl_slave_dwr[7:0]
+@28
+tb.user_project.ctrl_slave_ack
+tb.user_project.ctrl_slave_err
+tb.user_project.ctrl_slave_rty
+@22
+tb.user_project.ctrl_slave_drd[7:0]
+@200
+-
+-Levenshtein
+@22
+tb.user_project.levenshtein_ctrl.d[3:0]
+tb.user_project.levenshtein_ctrl.pm[7:0]
+@25
+tb.user_project.levenshtein_ctrl.state[1:0]
 [pattern_trace] 1
 [pattern_trace] 0

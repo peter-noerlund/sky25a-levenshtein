@@ -17,8 +17,6 @@ module wb_interconnect
         input wire wbm0_we_i,                           //! Write Enable
         input wire [SEL_WIDTH - 1 : 0] wbm0_sel_i,      //! Write Select
         input wire [DATA_WIDTH - 1 : 0] wbm0_dat_i,     //! Data In
-        input wire [2:0] wbm0_cti_i,                    //! Cycle Type Indicator
-        input wire [1:0] wbm0_bte_i,                    //! Burst Type Extension
         output wire wbm0_ack_o,                         //! Acknowledge
         output wire wbm0_err_o,                         //! Error
         output wire wbm0_rty_o,                         //! Retry
@@ -32,8 +30,6 @@ module wb_interconnect
         input wire wbm1_we_i,                           //! Write Enable
         input wire [SEL_WIDTH - 1 : 0] wbm1_sel_i,      //! Write Select
         input wire [DATA_WIDTH - 1 : 0] wbm1_dat_i,     //! Data In
-        input wire [2:0] wbm1_cti_i,                    //! Cycle Type Indicator
-        input wire [1:0] wbm1_bte_i,                    //! Burst Type Extension
         output wire wbm1_ack_o,                         //! Acknowledge
         output wire wbm1_err_o,                         //! Error
         output wire wbm1_rty_o,                         //! Retry
@@ -47,8 +43,6 @@ module wb_interconnect
         output wire wbs0_we_o,                          //! Write Enable
         output wire [SEL_WIDTH - 1 : 0] wbs0_sel_o,     //! Write Select
         output wire [DATA_WIDTH - 1 : 0] wbs0_dat_o,    //! Data Out
-        output wire [2:0] wbs0_cti_o,                   //! Cycle Type Indicator
-        output wire [1:0] wbs0_bte_o,                   //! Burst Type Extension
         input wire wbs0_ack_i,                          //! Acknowledge
         input wire wbs0_err_i,                          //! Error
         input wire wbs0_rty_i,                          //! Retry
@@ -62,8 +56,6 @@ module wb_interconnect
         output wire wbs1_we_o,                          //! Write Enable
         output wire [SEL_WIDTH - 1 : 0] wbs1_sel_o,     //! Write Select
         output wire [DATA_WIDTH - 1 : 0] wbs1_dat_o,    //! Data Out
-        output wire [2:0] wbs1_cti_o,                   //! Cycle Type Indicator
-        output wire [1:0] wbs1_bte_o,                   //! Burst Type Extension
         input wire wbs1_ack_i,                          //! Acknowledge
         input wire wbs1_err_i,                          //! Error
         input wire wbs1_rty_i,                          //! Retry
@@ -86,8 +78,6 @@ module wb_interconnect
     wire [SEL_WIDTH - 1 : 0] sel;
     wire [DATA_WIDTH - 1 : 0] dwr;
     wire [ADDR_WIDTH - 1: 0] adr;
-    wire [2:0] cti;
-    wire [1:0] bte;
 
     wire acmp0 = adr[ADDR_WIDTH - 1] == 1'b0;
     wire acmp1 = adr[ADDR_WIDTH - 1] == 1'b1;
@@ -111,8 +101,6 @@ module wb_interconnect
     assign wbs0_we_o = we;
     assign wbs0_sel_o = sel;
     assign wbs0_dat_o = dwr;
-    assign wbs0_cti_o = cti;
-    assign wbs0_bte_o = bte;
 
     assign wbs1_cyc_o = cyc & acmp1;
     assign wbs1_stb_o = stb & acmp1;
@@ -120,8 +108,6 @@ module wb_interconnect
     assign wbs1_we_o = we;
     assign wbs1_sel_o = sel;
     assign wbs1_dat_o = dwr;
-    assign wbs1_cti_o = cti;
-    assign wbs1_bte_o = bte;
 
     assign ack = wbs0_ack_i || wbs1_ack_i;
     assign err = wbs0_err_i || wbs1_err_i;
@@ -133,8 +119,6 @@ module wb_interconnect
     assign we = gnt0 ? wbm0_we_i : wbm1_we_i;
     assign sel = gnt0 ? wbm0_sel_i : wbm1_sel_i;
     assign dwr = gnt0 ? wbm0_dat_i : wbm1_dat_i;
-    assign cti = gnt0 ? wbm0_cti_i : wbm1_cti_i;
-    assign bte = gnt0 ? wbm0_bte_i : wbm1_bte_i;
 
     wb_arbiter #(.MASTER_COUNT(2)) arbiter(
         .clk_i(clk_i),
