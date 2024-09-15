@@ -95,7 +95,6 @@ module uart2wb
                     if (clk_counter == 4'd15) begin
                         if (uart_rxd == 1'b1 && byte_counter == 2'd3) begin
                             state <= STATE_WISHBONE;
-                            cyc <= 1'b1;
                         end else begin
                             state <= STATE_READ_UART_SYNC;
                         end
@@ -105,15 +104,22 @@ module uart2wb
                 end
 
                 STATE_WISHBONE: begin
-                    if (ack_i || err_i || rty_i) begin
-                        if (we_o) begin
-                            buffer[7:0] <= 8'h00;
-                        end else begin
-                            buffer[7:0] <= dat_i;
+                    if (clk_counter == 4'd7) begin
+                        if (!cyc) begin
+                            cyc <= 1'b1;
+                        end else if (ack_i || err_i || rty_i) begin
+                            if (we_o) begin
+                                buffer[7:0] <= 8'h00;
+                            end else begin
+                                buffer[7:0] <= dat_i;
+                            end
+                            cyc <= 1'b0;
+                            uart_txd <= 1'b0;
+                            state <= STATE_WRITE_UART_START_BIT;
+                            clk_counter <= 4'd0;
                         end
-                        cyc <= 1'b0;
-                        uart_txd <= 1'b0;
-                        state <= STATE_WRITE_UART_START_BIT;
+                    end else begin
+                        clk_counter <= clk_counter + 4'd1;
                     end
                 end
 
