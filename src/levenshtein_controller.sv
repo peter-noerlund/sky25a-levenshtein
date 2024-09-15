@@ -72,7 +72,7 @@ module levenshtein_controller
     assign wbm_stb_o = cyc;
     assign wbm_adr_o = (state == STATE_READ_DICT ? {1'b1, dict_address} : (state == STATE_READ_VECTOR ? MASTER_ADDR_WIDTH'(pm) : {2'b01, result_address}));
     assign wbm_we_o = (state == STATE_WRITE_RESULT);
-    assign wbm_dat_o = wbs_adr_i[0] == 1'b0 ? 8'(d) : 8'(mask);
+    assign wbm_dat_o = 8'(d);
 
     assign d0 = (((pm & vp) + vp) ^ vp) | pm | vn;
     assign hp = vn | ~(d0 | vp);
@@ -98,6 +98,10 @@ module levenshtein_controller
                             enabled <= wbs_dat_i[7];
                             error <= 1'b0;
                             word_length <= wbs_dat_i[2:0];
+                            d <= wbs_dat_i[DISTANCE_WIDTH - 1 : 0];
+                            vn <= BITVECTOR_WIDTH'(0);
+                            vp <= initial_vp;
+                            state <= STATE_READ_DICT;
                         end
 
                         2'd1: mask <= wbs_dat_i;
@@ -118,8 +122,10 @@ module levenshtein_controller
                             cyc <= 1'b1;
                         end else if (wbm_ack_i) begin
                             pm <= wbm_dat_i;
-                            if (wbm_dat_i[7] == 1'b1) begin
+                            if (wbm_dat_i == 8'hFE) begin
                                 state <= STATE_WRITE_RESULT;
+                            end else if (wbm_dat_i == 8'hFF) begin
+                                enabled <= 1'b0;
                             end else begin
                                 state <= STATE_READ_VECTOR;
                             end
@@ -161,12 +167,9 @@ module levenshtein_controller
                         end else if (wbm_ack_i) begin
                             result_address <= result_address + RESULT_ADDR_WIDTH'(1);
                             cyc <= 1'b0;
-                            d <= pm[DISTANCE_WIDTH - 1 : 0];
+                            d <= DISTANCE_WIDTH'(word_length);
                             vn <= BITVECTOR_WIDTH'(0);
                             vp <= initial_vp;
-                            if (pm == 8'hFF) begin
-                                enabled <= 1'b0;
-                            end
                             state <= STATE_READ_DICT;
                         end else if (wbm_err_i || wbm_rty_i) begin
                             enabled <= 1'b0;

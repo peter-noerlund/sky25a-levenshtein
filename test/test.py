@@ -170,28 +170,34 @@ async def test_project(dut):
     BITVECTOR_ADDR_BASE = 0x400000
     RESULT_ADDR_BASE = 0x500000
 
-    words = ["hest", "bil"]
+    words = ["h", "he", "hes", "hest", "heste", "hesten"]
     address = DICT_ADDR_BASE
     for word in words:
-        await wb_write(dut, address, 0x80 | len(word))
-        address = address + 1
         for c in word:
             await wb_write(dut, address, ord(c))
             address = address + 1
+        await wb_write(dut, address, 0xFE)
+        address = address + 1
     await wb_write(dut, address, 0xFF)
 
-    # word = fest
-    await wb_write(dut, BITVECTOR_ADDR_BASE + ord("f"), 0x01)
-    await wb_write(dut, BITVECTOR_ADDR_BASE + ord("e"), 0x02)
-    await wb_write(dut, BITVECTOR_ADDR_BASE + ord("s"), 0x04)
-    await wb_write(dut, BITVECTOR_ADDR_BASE + ord("t"), 0x08)
+    search_word = "hest"
+    vector_map = dict()
+    for c in search_word:
+        vector = 0
+        for i in range(0, len(search_word)):
+            if search_word[i] == c:
+                vector = vector | (1 << i)
+        vector_map[c] = vector
 
-    await wb_write(dut, MASK_ADDR, 0x0F)
-    await wb_write(dut, VP_ADDR, 0x07)
-    await wb_write(dut, CTRL_ADDR, 0x84)
+    for c, vector in vector_map.items():
+        await wb_write(dut, BITVECTOR_ADDR_BASE + ord(c), vector)
 
-    for i in range(0, 2):
-        await Timer(10, units="us")
+    await wb_write(dut, MASK_ADDR, 1 << (len(search_word) - 1))
+    await wb_write(dut, VP_ADDR, (1 << len(search_word)) - 1)
+    await wb_write(dut, CTRL_ADDR, 0x80 | len(search_word))
+
+    for i in range(0, 10):
+        await Timer(100, units="us")
 
         state = await wb_read(dut, 0x00000000)
         if state & 0x80 == 0:
@@ -200,8 +206,14 @@ async def test_project(dut):
     assert state & 0x80 == 0
     assert state & 0x40 == 0
 
-    results = []
-    results = results + [await wb_read(dut, 0x500001)]
-    results = results + [await wb_read(dut, 0x500002)]
+    results = dict()
+    i = 0
+    for word in words:
+        distance = await wb_read(dut, RESULT_ADDR_BASE + i)
+        results[word] = distance
+        i = i + 1
+
+    for c in vector_map:
+        await wb_write(dut, BITVECTOR_ADDR_BASE + ord(c), 0)
 
     print(results)
