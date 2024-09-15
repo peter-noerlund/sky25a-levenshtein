@@ -21,9 +21,9 @@ module tt_um_levenshtein
 
     assign uo_out[7:5] = 3'b000;
     assign uo_out[3:1] = 3'b000;
-    assign uio_oe = 8'b10111011;
+    assign uio_oe = 8'b00001011;
     assign uio_out[2] = 1'b0;
-    assign uio_out[6] = 1'b0;
+    assign uio_out[7:4] = 4'b0000;
 
     wire uart1_cyc;
     wire uart1_stb;
@@ -45,36 +45,41 @@ module tt_um_levenshtein
     wire uart2_rty;
     wire [7:0] uart2_drd;
 
-    wire sram1_cyc;
-    wire sram1_stb;
-    wire [21:0] sram1_adr;
-    wire [7:0] sram1_dwr;
-    wire sram1_we;
-    wire sram1_ack;
-    wire sram1_err;
-    wire sram1_rty;
+    wire sram_cyc;
+    wire sram_stb;
+    wire [21:0] sram_adr;
+    wire [7:0] sram_dwr;
+    wire sram_we;
+    wire sram_ack;
+    wire sram_err;
+    wire sram_rty;
+    wire [7:0] sram_drd;
 
     /* verilator lint_off UNUSEDSIGNAL */
-    wire sram1_sel;
-    wire [7:0] sram1_drd;
-    wire [2:0] sram1_cti;
-    wire [1:0] sram1_bte;
+    wire sram_sel;
+    wire [2:0] sram_cti;
+    wire [1:0] sram_bte;
     /* verilator lint_on UNUSEDSIGNAL */
 
-    wire sram2_cyc;
-    wire sram2_stb;
-    wire [21:0] sram2_adr;
-    wire [7:0] sram2_dwr;
-    wire sram2_we;
-    wire sram2_ack;
-    wire sram2_err;
-    wire sram2_rty;
+    wire ctrl_cyc;
+    wire ctrl_stb;
+    wire [7:0] ctrl_dwr;
+    wire ctrl_we;
+    wire ctrl_ack;
+    wire ctrl_err;
+    wire ctrl_rty;
+    wire [7:0] ctrl_drd;
 
     /* verilator lint_off UNUSEDSIGNAL */
-    wire sram2_sel;
-    wire [7:0] sram2_drd;
-    wire [2:0] sram2_cti;
-    wire [1:0] sram2_bte;
+    wire [21:0] ctrl_adr;
+    wire ctrl_sel;
+    wire [2:0] ctrl_cti;
+    wire [1:0] ctrl_bte;
+    /* verilator lint_on UNUSEDSIGNAL */
+
+    /* verilator lint_off UNUSEDSIGNAL */
+    wire engine_enabled;
+    wire [4:0] word_length;
     /* verilator lint_on UNUSEDSIGNAL */
 
     uart2wb uart1(
@@ -113,7 +118,24 @@ module tt_um_levenshtein
         .dat_i(uart2_drd)
     );
 
-    spi_controller sram1(
+    engine_controller ctrl(
+        .clk_i(clk),
+        .rst_i(!rst_n),
+
+        .cyc_i(ctrl_cyc),
+        .stb_i(ctrl_stb),
+        .dat_i(ctrl_dwr),
+        .we_i(ctrl_we),
+        .ack_o(ctrl_ack),
+        .err_o(ctrl_err),
+        .rty_o(ctrl_rty),
+        .dat_o(ctrl_drd),
+
+        .enabled(engine_enabled),
+        .word_length(word_length)
+    );
+
+    spi_controller sram(
         .clk_i(clk),
         .rst_i(!rst_n),
 
@@ -122,36 +144,17 @@ module tt_um_levenshtein
         .miso(uio_in[2]),
         .ss_n(uio_out[0]),
         
-        .cyc_i(sram1_cyc),
-        .stb_i(sram1_stb),
-        .adr_i({2'b00, sram1_adr}),
-        .dat_i(sram1_dwr),
-        .we_i(sram1_we),
-        .ack_o(sram1_ack),
-        .err_o(sram1_err),
-        .rty_o(sram1_rty),
-        .dat_o(sram1_drd)
+        .cyc_i(sram_cyc),
+        .stb_i(sram_stb),
+        .adr_i({2'b00, sram_adr}),
+        .dat_i(sram_dwr),
+        .we_i(sram_we),
+        .ack_o(sram_ack),
+        .err_o(sram_err),
+        .rty_o(sram_rty),
+        .dat_o(sram_drd)
     );
 
-    spi_controller sram2(
-        .clk_i(clk),
-        .rst_i(!rst_n),
-
-        .sck(uio_out[7]),
-        .mosi(uio_out[5]),
-        .miso(uio_in[6]),
-        .ss_n(uio_out[4]),
-        
-        .cyc_i(sram2_cyc),
-        .stb_i(sram2_stb),
-        .adr_i({2'b00, sram2_adr}),
-        .dat_i(sram2_dwr),
-        .we_i(sram2_we),
-        .ack_o(sram2_ack),
-        .err_o(sram2_err),
-        .rty_o(sram2_rty),
-        .dat_o(sram2_drd)
-    );
 
     wb_interconnect #(.ADDR_WIDTH(23)) intercon(
         .clk_i(clk),
@@ -183,30 +186,30 @@ module tt_um_levenshtein
         .wbm1_rty_o(uart2_rty),
         .wbm1_dat_o(uart2_drd),
 
-        .wbs0_cyc_o(sram1_cyc),
-        .wbs0_stb_o(sram1_stb),
-        .wbs0_adr_o(sram1_adr),
-        .wbs0_we_o(sram1_we),
-        .wbs0_sel_o(sram1_sel),
-        .wbs0_dat_o(sram1_dwr),
-        .wbs0_cti_o(sram1_cti),
-        .wbs0_bte_o(sram1_bte),
-        .wbs0_ack_i(sram1_ack),
-        .wbs0_err_i(sram1_err),
-        .wbs0_rty_i(sram1_rty),
-        .wbs0_dat_i(sram1_drd),
+        .wbs0_cyc_o(ctrl_cyc),
+        .wbs0_stb_o(ctrl_stb),
+        .wbs0_adr_o(ctrl_adr),
+        .wbs0_we_o(ctrl_we),
+        .wbs0_sel_o(ctrl_sel),
+        .wbs0_dat_o(ctrl_dwr),
+        .wbs0_cti_o(ctrl_cti),
+        .wbs0_bte_o(ctrl_bte),
+        .wbs0_ack_i(ctrl_ack),
+        .wbs0_err_i(ctrl_err),
+        .wbs0_rty_i(ctrl_rty),
+        .wbs0_dat_i(ctrl_drd),
 
-        .wbs1_cyc_o(sram2_cyc),
-        .wbs1_stb_o(sram2_stb),
-        .wbs1_adr_o(sram2_adr),
-        .wbs1_we_o(sram2_we),
-        .wbs1_sel_o(sram2_sel),
-        .wbs1_dat_o(sram2_dwr),
-        .wbs1_cti_o(sram2_cti),
-        .wbs1_bte_o(sram2_bte),
-        .wbs1_ack_i(sram2_ack),
-        .wbs1_err_i(sram2_err),
-        .wbs1_rty_i(sram2_rty),
-        .wbs1_dat_i(sram2_drd)
+        .wbs1_cyc_o(sram_cyc),
+        .wbs1_stb_o(sram_stb),
+        .wbs1_adr_o(sram_adr),
+        .wbs1_we_o(sram_we),
+        .wbs1_sel_o(sram_sel),
+        .wbs1_dat_o(sram_dwr),
+        .wbs1_cti_o(sram_cti),
+        .wbs1_bte_o(sram_bte),
+        .wbs1_ack_i(sram_ack),
+        .wbs1_err_i(sram_err),
+        .wbs1_rty_i(sram_rty),
+        .wbs1_dat_i(sram_drd)
     );
 endmodule

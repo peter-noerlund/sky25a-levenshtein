@@ -1,21 +1,22 @@
 [*]
 [*] GTKWave Analyzer v3.3.118 (w)1999-2023 BSI
-[*] Sat Sep 14 16:49:32 2024
+[*] Sun Sep 15 15:28:07 2024
 [*]
 [dumpfile] "/home/pch/Projects/tt09-levenshtein/test/tb.vcd"
-[dumpfile_mtime] "Sat Sep 14 16:49:14 2024"
-[dumpfile_size] 29232
+[dumpfile_mtime] "Sun Sep 15 15:25:36 2024"
+[dumpfile_size] 428220
 [savefile] "/home/pch/Projects/tt09-levenshtein/test/tb.gtkw"
-[timestart] 11533000
+[timestart] 0
 [size] 3440 1337
 [pos] -1 -1
-*-17.934534 13040000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-23.634535 15820000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] tb.
 [treeopen] tb.user_project.
+[treeopen] tb.user_project.intercon.
 [sst_width] 297
-[signals_width] 237
+[signals_width] 358
 [sst_expanded] 1
-[sst_vpaned_height] 676
+[sst_vpaned_height] 622
 @28
 tb.user_project.ena
 tb.user_project.clk
@@ -30,53 +31,64 @@ tb.user_project.rst_n
 -
 -PMOD SPI
 @28
-tb.user_project.sram.sck
 tb.user_project.sram.ss_n
+tb.user_project.sram.sck
 tb.user_project.sram.mosi
+@29
 tb.user_project.sram.miso
 @200
 -
--Wishbone
+-Wishbone (UART)
 @28
-tb.user_project.uart.cyc_o
-tb.user_project.uart.stb_o
+tb.user_project.uart1_cyc
+tb.user_project.uart1_stb
 @22
-tb.user_project.uart.adr_o[22:0]
+tb.user_project.uart1_adr[22:0]
 @28
-tb.user_project.uart.we_o
-@c00022
-tb.user_project.uart.dat_o[7:0]
-@28
-(0)tb.user_project.uart.dat_o[7:0]
-(1)tb.user_project.uart.dat_o[7:0]
-(2)tb.user_project.uart.dat_o[7:0]
-(3)tb.user_project.uart.dat_o[7:0]
-(4)tb.user_project.uart.dat_o[7:0]
-(5)tb.user_project.uart.dat_o[7:0]
-(6)tb.user_project.uart.dat_o[7:0]
-(7)tb.user_project.uart.dat_o[7:0]
-@1401200
--group_end
-@28
-tb.user_project.uart.ack_i
-tb.user_project.uart.err_i
-tb.user_project.uart.rty_i
+tb.user_project.uart1_we
 @22
-tb.user_project.uart.dat_i[7:0]
+tb.user_project.uart1_dwr[7:0]
+@28
+tb.user_project.uart1_ack
+tb.user_project.uart1_err
+tb.user_project.uart1_rty
+@22
+tb.user_project.uart1_drd[7:0]
 @200
 -
--UART Internals
-@24
-tb.user_project.uart.state[2:0]
-tb.user_project.uart.clk_counter[3:0]
-tb.user_project.uart.bit_counter[2:0]
-tb.user_project.uart.byte_counter[1:0]
+-Wishbone (Controller)
+@28
+tb.user_project.ctrl_cyc
+tb.user_project.ctrl_stb
 @22
-tb.user_project.uart.buffer[31:0]
+tb.user_project.ctrl_adr[21:0]
+@28
+tb.user_project.ctrl_we
+@22
+tb.user_project.ctrl_dwr[7:0]
+@28
+tb.user_project.ctrl_ack
+tb.user_project.ctrl_err
+tb.user_project.ctrl_rty
+@22
+tb.user_project.ctrl_drd[7:0]
 @200
 -
--SPI Internals
-@25
-tb.user_project.sram.bit_counter[5:0]
+-Wishbone (SRAM)
+@28
+tb.user_project.sram_cyc
+tb.user_project.sram_stb
+@22
+tb.user_project.sram_adr[21:0]
+@28
+tb.user_project.sram_we
+@22
+tb.user_project.sram_dwr[7:0]
+@28
+tb.user_project.sram_ack
+tb.user_project.sram_err
+tb.user_project.sram_rty
+@22
+tb.user_project.sram_drd[7:0]
 [pattern_trace] 1
 [pattern_trace] 0

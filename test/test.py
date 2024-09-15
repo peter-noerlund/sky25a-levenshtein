@@ -158,12 +158,17 @@ async def test_project(dut):
 
     await ClockCycles(dut.clk, 10)
 
-    await wb_write(dut, 0, 0xDE)
-    await wb_write(dut, 1, 0xAD)
-    await wb_write(dut, 2, 0xBE)
-    await wb_write(dut, 3, 0xEF)
+    await wb_write(dut, 0x400000, 0xDE)
+    await wb_write(dut, 0x400001, 0xAD)
+    await wb_write(dut, 0x400002, 0xBE)
+    await wb_write(dut, 0x400003, 0xEF)
 
-    assert await wb_read(dut, 0) == 0xDE
-    assert await wb_read(dut, 1) == 0xAD
-    assert await wb_read(dut, 2) == 0xBE
-    assert await wb_read(dut, 3) == 0xEF
+    assert await wb_read(dut, 0x400000) == 0xDE
+    assert await wb_read(dut, 0x400001) == 0xAD
+    assert await wb_read(dut, 0x400002) == 0xBE
+    assert await wb_read(dut, 0x400003) == 0xEF
+
+    await wb_write(dut, 0x0, 0x87)
+
+    assert dut.user_project.engine_enabled
+    assert dut.user_project.word_length == 7

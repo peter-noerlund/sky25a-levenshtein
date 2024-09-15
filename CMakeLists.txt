@@ -21,6 +21,7 @@ verilate(tt09-levenshtein
     OPT_FAST "-O3 -march=native -flto"
     VERILATOR_ARGS -Wall -I${CMAKE_CURRENT_SOURCE_DIR}/src
     SOURCES
+    src/engine_controller.sv
     src/tt_um_levenshtein.v
     src/uart2wb.sv
     src/spi_controller.sv
