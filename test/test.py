@@ -168,7 +168,22 @@ async def test_project(dut):
     assert await wb_read(dut, 0x400002) == 0xBE
     assert await wb_read(dut, 0x400003) == 0xEF
 
-    await wb_write(dut, 0x0, 0x87)
+    await wb_write(dut, 0x000000, 0x00)
+    assert dut.user_project.engine_enabled == 0
+    assert dut.user_project.word_length == 0
+    assert await wb_read(dut, 0x000000) == 0x00
 
-    assert dut.user_project.engine_enabled
-    assert dut.user_project.word_length == 7
+    await wb_write(dut, 0x000000, 0x04)
+    assert dut.user_project.engine_enabled == 0
+    assert dut.user_project.word_length == 4
+    assert await wb_read(dut, 0x00000000) == 0x04
+
+    await wb_write(dut, 0x000000, 0x9F)
+    assert dut.user_project.engine_enabled == 1
+    assert dut.user_project.word_length == 31
+    assert await wb_read(dut, 0x00000000) == 0x9F
+
+    await wb_write(dut, 0x000000, 0xFF)
+    assert dut.user_project.engine_enabled == 1
+    assert dut.user_project.word_length == 31
+    assert await wb_read(dut, 0x00000000) == 0x9F
