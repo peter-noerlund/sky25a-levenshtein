@@ -55,11 +55,11 @@ async def spi_sram(dut):
                     address = address | byte
                     if command == 0x03:
                         queue = memory[address] if address in memory else 0
-                        print(f"READ(0x{address:06x}) = 0x{queue:02x}")
+                        print(f"R [0x{address:06x}] => 0x{queue:02x}", flush=True)
                 else:
 
                     if command == 0x02:
-                        print(f"WRITE(0x{address:06x}, 0x{byte:02x})")
+                        print(f"W [0x{address:06x}] <= 0x{byte:02x}", flush=True)
                         memory[address] = byte
 
                     address = address + 1
@@ -164,8 +164,12 @@ async def test_project(dut):
     await ClockCycles(dut.clk, 10)
 
     CTRL_ADDR = 0x000000
-    MASK_ADDR = 0x000001
-    VP_ADDR = 0x000002
+    LENGTH_ADDR = 0x000001
+    MASK_ADDR_LO = 0x000002
+    MASK_ADDR_HI = 0x000003
+    VP_ADDR_LO = 0x000004
+    VP_ADDR_HI = 0x000005
+
     DICT_ADDR_BASE = 0x600000
     BITVECTOR_ADDR_BASE = 0x400000
     RESULT_ADDR_BASE = 0x500000
@@ -190,21 +194,30 @@ async def test_project(dut):
         vector_map[c] = vector
 
     for c, vector in vector_map.items():
-        await wb_write(dut, BITVECTOR_ADDR_BASE + ord(c), vector)
+        await wb_write(dut, BITVECTOR_ADDR_BASE + ord(c) * 2, vector & 0xFF)
+        await wb_write(dut, BITVECTOR_ADDR_BASE + ord(c) * 2 + 1, (vector >> 8) & 0xFF)
 
-    await wb_write(dut, MASK_ADDR, 1 << (len(search_word) - 1))
-    await wb_write(dut, VP_ADDR, (1 << len(search_word)) - 1)
-    await wb_write(dut, CTRL_ADDR, 0x80 | len(search_word))
+    await wb_write(dut, LENGTH_ADDR, len(search_word))
 
-    for i in range(0, 10):
+    mask = 1 << (len(search_word) - 1)
+    await wb_write(dut, MASK_ADDR_LO, mask & 0xFF)
+    await wb_write(dut, MASK_ADDR_HI, mask & 0xFF)
+
+    vp = (1 << len(search_word)) - 1
+    await wb_write(dut, VP_ADDR_LO, vp)
+    await wb_write(dut, VP_ADDR_HI, vp)
+
+    await wb_write(dut, CTRL_ADDR, 0x01)
+
+    for i in range(0, 20):
         await Timer(100, units="us")
 
         state = await wb_read(dut, 0x00000000)
-        if state & 0x80 == 0:
+        if state & 0x01 == 0:
             break
 
-    assert state & 0x80 == 0
-    assert state & 0x40 == 0
+    assert state & 0x01 == 0
+    assert state & 0x02 == 0
 
     results = dict()
     i = 0
@@ -214,6 +227,7 @@ async def test_project(dut):
         i = i + 1
 
     for c in vector_map:
-        await wb_write(dut, BITVECTOR_ADDR_BASE + ord(c), 0)
+        await wb_write(dut, BITVECTOR_ADDR_BASE + ord(c) * 2, 0)
+        await wb_write(dut, BITVECTOR_ADDR_BASE + ord(c) * 2 + 1, 0)
 
     print(results)
