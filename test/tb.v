@@ -42,4 +42,10 @@ module tb ();
       .rst_n  (rst_n)     // not reset
   );
 
+  qspi_sram pmod_sram(
+    .sck(uio_out[3]),
+    .ss_n(uio_out[0]),
+    .sio_in({uio_out[5], uio_out[4], uio_out[2], uio_out[1]}),
+    .sio_out({uio_in[5], uio_in[4], uio_in[2], uio_in[1]})
+  );
 endmodule

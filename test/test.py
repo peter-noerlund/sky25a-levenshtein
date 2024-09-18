@@ -6,83 +6,6 @@ from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles, Edge, FallingEdge, Timer
 
 
-async def spi_sram(dut):
-    bit_pos = 0
-    byte = 0
-
-    byte_pos = 0
-    command = 0
-    address = 0
-    data = 0
-
-    queue = 0
-
-    memory = dict()
-
-    old_ss_n = int(dut.uio_out[0]) if dut.uio_oe[0] else 0
-    old_sck = int(dut.uio_out[3]) if dut.uio_oe[3] else 0
-    while True:
-        await Edge(dut.clk)
-
-        ss_n = int(dut.uio_out[0]) if dut.uio_oe[0] else 0
-        sck = int(dut.uio_out[3]) if dut.uio_oe[3] else 0
-
-        if old_ss_n and not ss_n:
-            # Falling edge on SS#
-            bit_pos = 0
-            byte = 0
-
-            byte_pos = 0
-            command = 0
-            address = 0
-            data = 0
-
-            queue = 0
-
-        if not ss_n and not old_sck and sck:
-            # Rising edge on SCK
-            byte = ((byte << 1) + (int(dut.uio_out[1]) if dut.uio_oe[1] else 0)) & 0xFF
-            bit_pos = bit_pos + 1
-            if bit_pos == 8:
-                if byte_pos == 0:
-                    command = byte
-                    assert command == 0x02 or command == 0x03
-                elif byte_pos == 1:
-                    address = byte << 16
-                elif byte_pos == 2:
-                    address = address | (byte << 8)
-                elif byte_pos == 3:
-                    address = address | byte
-                    if command == 0x03:
-                        queue = memory[address] if address in memory else 0
-                        print(f"R [0x{address:06x}] => 0x{queue:02x}", flush=True)
-                else:
-
-                    if command == 0x02:
-                        print(f"W [0x{address:06x}] <= 0x{byte:02x}", flush=True)
-                        memory[address] = byte
-
-                    address = address + 1
-
-                    if command == 0x03:
-                        #print(f"READ(0x{address:06x}) = 0x{queue:02x}")
-                        queue = memory[address] if address in memory else 0
-                    else:
-                        queue = 0
-
-                byte_pos = byte_pos + 1
-                bit_pos = 0
-        
-        if not ss_n and old_sck and not sck:
-            dut.uio_in.value = (int(dut.uio_in) & ~0x04) | (0x04 if queue & 0x80 == 0x80 else 0x00)
-            queue = (queue << 1) & 0xFF
-        if ss_n:
-            dut.uio_in.value = int(dut.uio_in) & ~0x04
-
-        old_ss_n = ss_n
-        old_sck = sck
-
-
 async def uart_transmit(dut, value, period=320, period_units="ns"):
     dut.ui_in.value = 0
 
@@ -157,26 +80,26 @@ async def test_project(dut):
     await ClockCycles(dut.clk, 10)
     dut.rst_n.value = 1
 
-    await cocotb.start(spi_sram(dut))
-
     dut._log.info("Test project behavior")
 
     await ClockCycles(dut.clk, 10)
 
     CTRL_ADDR = 0x000000
     LENGTH_ADDR = 0x000001
-    MASK_ADDR_LO = 0x000002
-    MASK_ADDR_HI = 0x000003
-    VP_ADDR_LO = 0x000004
-    VP_ADDR_HI = 0x000005
+    MASK_ADDR_HI = 0x000002
+    MASK_ADDR_LO = 0x000003
+    VP_ADDR_HI = 0x000004
+    VP_ADDR_LO = 0x000005
 
     STATUS_ADDR = 0x000000
     DISTANCE_ADDR = 0x000001
-    IDX_ADDR_LO = 0x000002
-    IDX_ADDR_HI = 0x000003
+    IDX_ADDR_HI = 0x000002
+    IDX_ADDR_LO = 0x000003
 
     DICT_ADDR_BASE = 0x600000
     BITVECTOR_ADDR_BASE = 0x400000
+
+    # Save dictionary
 
     words = ["h", "he", "hes", "hest", "heste", "hesten"]
     address = DICT_ADDR_BASE
@@ -188,6 +111,10 @@ async def test_project(dut):
         address = address + 1
     await wb_write(dut, address, 0xFF)
 
+    # Clear bitmaps
+    for i in range(0, 256 * 2):
+        await wb_write(dut, BITVECTOR_ADDR_BASE + i, 0x00)
+
     search_word = "hest"
     vector_map = dict()
     for c in search_word:
@@ -198,18 +125,18 @@ async def test_project(dut):
         vector_map[c] = vector
 
     for c, vector in vector_map.items():
-        await wb_write(dut, BITVECTOR_ADDR_BASE + ord(c) * 2, vector & 0xFF)
-        await wb_write(dut, BITVECTOR_ADDR_BASE + ord(c) * 2 + 1, (vector >> 8) & 0xFF)
+        await wb_write(dut, BITVECTOR_ADDR_BASE + ord(c) * 2, (vector >> 8) & 0xFF)
+        await wb_write(dut, BITVECTOR_ADDR_BASE + ord(c) * 2 + 1, vector & 0xFF)
 
     await wb_write(dut, LENGTH_ADDR, len(search_word))
 
     mask = 1 << (len(search_word) - 1)
-    await wb_write(dut, MASK_ADDR_LO, mask & 0xFF)
     await wb_write(dut, MASK_ADDR_HI, mask & 0xFF)
+    await wb_write(dut, MASK_ADDR_LO, mask & 0xFF)
 
     vp = (1 << len(search_word)) - 1
-    await wb_write(dut, VP_ADDR_LO, vp)
     await wb_write(dut, VP_ADDR_HI, vp)
+    await wb_write(dut, VP_ADDR_LO, vp)
 
     await wb_write(dut, CTRL_ADDR, 0x01)
 

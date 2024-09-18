@@ -47,6 +47,13 @@ module levenshtein_controller
     localparam ADDR_INITIAL_VP_HI = 4;
     localparam ADDR_INITIAL_VP_LO = 5;
 
+    localparam ADDR_STATE = 2'd0;
+    localparam ADDR_DISTANCE = 2'd1;
+    localparam ADDR_IDX_HI = 2'd2;
+    /* verilator lint_off UNUSEDPARAM */
+    localparam ADDR_IDX_LO = 2'd3;
+    /* verilator lint_on UNUSEDPARAM */
+
     reg enabled;
     reg error;
     reg [3:0] word_length;
@@ -54,8 +61,8 @@ module levenshtein_controller
     reg [BITVECTOR_WIDTH - 1 : 0] initial_vp;
 
     localparam STATE_READ_DICT = 2'd0;
-    localparam STATE_READ_VECTOR_LO = 2'd1;
-    localparam STATE_READ_VECTOR_HI = 2'd2;
+    localparam STATE_READ_VECTOR_HI = 2'd1;
+    localparam STATE_READ_VECTOR_LO = 2'd2;
     localparam STATE_LEVENSHTEIN = 2'd3;
 
     localparam DICT_ADDR_WIDTH = MASTER_ADDR_WIDTH - 1;
@@ -71,22 +78,22 @@ module levenshtein_controller
     reg [BITVECTOR_WIDTH - 1 : 0] vn;
     reg [DISTANCE_WIDTH - 1 : 0] d;
 
-    reg [ID_WIDTH - 1 : 0] id;
-    reg [ID_WIDTH - 1 : 0] best_id;
+    reg [ID_WIDTH - 1 : 0] idx;
+    reg [ID_WIDTH - 1 : 0] best_idx;
     reg [DISTANCE_WIDTH - 1 : 0] best_distance;
 
     assign wbs_err_o = 1'b0;
     assign wbs_rty_o = 1'b0;
     assign wbs_dat_o = 
-        (wbs_adr_i[1:0] == 2'd0 ? {6'b000000, error, enabled} :
-        (wbs_adr_i[1:0] == 2'd1 ? best_distance :
-        (wbs_adr_i[1:0] == 2'd2 ? best_id[7:0] : best_id[15:8])));
+        (wbs_adr_i[1:0] == ADDR_STATE ? {6'b000000, error, enabled} :
+        (wbs_adr_i[1:0] == ADDR_DISTANCE ? best_distance :
+        (wbs_adr_i[1:0] == ADDR_IDX_HI ? best_idx[15:8] : best_idx[7:0])));
 
     assign wbm_cyc_o = cyc;
     assign wbm_stb_o = cyc;
     assign wbm_adr_o =
         (state == STATE_READ_DICT ? {1'b1, dict_address} :
-        (state == STATE_READ_VECTOR_LO ? MASTER_ADDR_WIDTH'({pm[7:0], 1'b0}) :  MASTER_ADDR_WIDTH'({pm[7:0], 1'b1})));
+        (state == STATE_READ_VECTOR_HI ? MASTER_ADDR_WIDTH'({pm[7:0], 1'b0}) :  MASTER_ADDR_WIDTH'({pm[7:0], 1'b1})));
     assign wbm_we_o = 1'b0;
     assign wbm_dat_o = 8'h00;
 
@@ -116,14 +123,14 @@ module levenshtein_controller
                         vn <= BITVECTOR_WIDTH'(0);
                         vp <= initial_vp;
                         state <= STATE_READ_DICT;
-                        id <= ID_WIDTH'(0);
-                        best_id <= ID_WIDTH'(0);
+                        idx <= ID_WIDTH'(0);
+                        best_idx <= ID_WIDTH'(0);
                         best_distance <= DISTANCE_WIDTH'(-1);
                     end else if (wbs_adr_i[2:0] == 3'(ADDR_LENGTH)) begin
                         word_length <= wbs_dat_i[3:0];
-                    end else if (wbs_adr_i[2:0] == 3'(ADDR_MASK_LO)) begin
-                        mask[15:8] <= wbs_dat_i;
                     end else if (wbs_adr_i[2:0] == 3'(ADDR_MASK_HI)) begin
+                        mask[15:8] <= wbs_dat_i;
+                    end else if (wbs_adr_i[2:0] == 3'(ADDR_MASK_LO)) begin
                         mask[7:0] <= wbs_dat_i;
                     end else if (wbs_adr_i[2:0] == 3'(ADDR_INITIAL_VP_HI)) begin
                         initial_vp[15:8] <= wbs_dat_i;
@@ -145,10 +152,10 @@ module levenshtein_controller
                             pm[7:0] <= wbm_dat_i;
                             if (wbm_dat_i == 8'hFE) begin
                                 if (d < best_distance) begin
-                                    best_id <= id;
+                                    best_idx <= idx;
                                     best_distance <= d;
                                 end
-                                id <= id + ID_WIDTH'(1);
+                                idx <= idx + ID_WIDTH'(1);
                                 d <= DISTANCE_WIDTH'(word_length);
                                 vn <= BITVECTOR_WIDTH'(0);
                                 vp <= initial_vp;
@@ -157,23 +164,10 @@ module levenshtein_controller
                                 enabled <= 1'b0;
                                 error <= 1'b0;
                             end else begin
-                                state <= STATE_READ_VECTOR_LO;
+                                state <= STATE_READ_VECTOR_HI;
                             end
                             cyc <= 1'b0;
                             dict_address <= dict_address + DICT_ADDR_WIDTH'(1);
-                        end else if (wbm_err_i || wbm_rty_i) begin
-                            cyc <= 1'b0;
-                            enabled <= 1'b0;
-                            error <= 1'b1;
-                        end
-                    end
-
-                    STATE_READ_VECTOR_LO: begin
-                        if (!cyc) begin
-                            cyc <= 1'b1;
-                        end else if (wbm_ack_i) begin
-                            pm[7:0] <= wbm_dat_i;
-                            state <= STATE_READ_VECTOR_HI;
                         end else if (wbm_err_i || wbm_rty_i) begin
                             cyc <= 1'b0;
                             enabled <= 1'b0;
@@ -187,6 +181,19 @@ module levenshtein_controller
                         end else if (wbm_ack_i) begin
                             pm[15:8] <= wbm_dat_i;
                             cyc <= 1'b0;
+                            state <= STATE_READ_VECTOR_LO;
+                        end else if (wbm_err_i || wbm_rty_i) begin
+                            cyc <= 1'b0;
+                            enabled <= 1'b0;
+                            error <= 1'b1;
+                        end
+                    end
+
+                    STATE_READ_VECTOR_LO: begin
+                        if (!cyc) begin
+                            cyc <= 1'b1;
+                        end else if (wbm_ack_i) begin
+                            pm[7:0] <= wbm_dat_i;
                             state <= STATE_LEVENSHTEIN;
                         end else if (wbm_err_i || wbm_rty_i) begin
                             cyc <= 1'b0;
