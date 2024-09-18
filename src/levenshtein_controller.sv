@@ -180,7 +180,6 @@ module levenshtein_controller
                             cyc <= 1'b1;
                         end else if (wbm_ack_i) begin
                             pm[15:8] <= wbm_dat_i;
-                            cyc <= 1'b0;
                             state <= STATE_READ_VECTOR_LO;
                         end else if (wbm_err_i || wbm_rty_i) begin
                             cyc <= 1'b0;
@@ -194,6 +193,7 @@ module levenshtein_controller
                             cyc <= 1'b1;
                         end else if (wbm_ack_i) begin
                             pm[7:0] <= wbm_dat_i;
+                            cyc <= 1'b0;
                             state <= STATE_LEVENSHTEIN;
                         end else if (wbm_err_i || wbm_rty_i) begin
                             cyc <= 1'b0;
