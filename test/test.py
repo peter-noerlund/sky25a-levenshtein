@@ -170,9 +170,13 @@ async def test_project(dut):
     VP_ADDR_LO = 0x000004
     VP_ADDR_HI = 0x000005
 
+    STATUS_ADDR = 0x000000
+    DISTANCE_ADDR = 0x000001
+    IDX_ADDR_LO = 0x000002
+    IDX_ADDR_HI = 0x000003
+
     DICT_ADDR_BASE = 0x600000
     BITVECTOR_ADDR_BASE = 0x400000
-    RESULT_ADDR_BASE = 0x500000
 
     words = ["h", "he", "hes", "hest", "heste", "hesten"]
     address = DICT_ADDR_BASE
@@ -212,22 +216,19 @@ async def test_project(dut):
     for i in range(0, 20):
         await Timer(100, units="us")
 
-        state = await wb_read(dut, 0x00000000)
+        state = await wb_read(dut, STATUS_ADDR)
         if state & 0x01 == 0:
             break
 
     assert state & 0x01 == 0
     assert state & 0x02 == 0
 
-    results = dict()
-    i = 0
-    for word in words:
-        distance = await wb_read(dut, RESULT_ADDR_BASE + i)
-        results[word] = distance
-        i = i + 1
+    distance = await wb_read(dut, DISTANCE_ADDR)
 
-    for c in vector_map:
-        await wb_write(dut, BITVECTOR_ADDR_BASE + ord(c) * 2, 0)
-        await wb_write(dut, BITVECTOR_ADDR_BASE + ord(c) * 2 + 1, 0)
+    idx_hi = await wb_read(dut, IDX_ADDR_HI)
+    idx_lo = await wb_read(dut, IDX_ADDR_LO)
+    
+    idx = (idx_hi << 8) + idx_lo
 
-    print(results)
+    assert idx == 3
+    assert distance == 0
