@@ -9,17 +9,16 @@ You can also include images in this folder and reference them in the markdown. E
 
 ## How it works
 
-Explain how your project works
+tt09-levenshtein is a fuzzy search engine which can find the best matching word in a dictionary based on levenshtein distance.
 
 ### Memory layout
 
 
-| Address  | Size | Description |
-|----------|------|-------------|
-| 0x000000 |   1B | Control     |
-| 0x400000 | 128B | Bitvectors  |
-| 0x500000 |  1MB | Results     |
-| 0x600000 |  2MB | Dictionary  |
+| Address  | Size | Description    |
+|----------|------|----------------|
+| 0x000000 |   6B | Control/Status |
+| 0x400000 | 128B | Bitvectors     |
+| 0x600000 |  2MB | Dictionary     |
 
 
 ## How to test
