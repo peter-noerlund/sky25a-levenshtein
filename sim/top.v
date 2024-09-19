@@ -45,7 +45,7 @@ module top
         .uio_oe(uio_oe)
     );
 
-    qspi_sram pmod_sram(
+    qspi_sram #(.VERBOSE(0)) pmod_sram(
         .sck(uio_out[3]),
         .ss_n(uio_out[0]),
         .sio_in({uio_out[5], uio_out[4], uio_out[2], uio_out[1]}),
