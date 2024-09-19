@@ -1,5 +1,6 @@
 `default_nettype none
 
+/* verilator lint_off UNUSEDSIGNAL */
 module qspi_sram
     #(
         parameter CMD_WRITE_1S_1S_1S=8'h02,
@@ -27,7 +28,6 @@ module qspi_sram
     localparam STATE_FAIL           = 4'd8;
 
     wire mosi;
-    wire miso;
 
     wire [7:0] next_command;
     wire [23:0] next_address;
@@ -47,7 +47,6 @@ module qspi_sram
     reg [7:0] write_buffer;
 
     assign mosi = sio_in[0];
-    assign miso = sio_out[1];
     assign next_command = {command[6:0], mosi};
     assign next_address = {address[22:0], mosi};
     assign next_address_quad = {address[19:0], sio_in};
@@ -59,14 +58,22 @@ module qspi_sram
     initial begin
         state = STATE_COMMAND;
         counter = 5'd0;
+`ifdef VERILATOR
+        sio_out = 4'b0000;
+`else // VERILATOR
         sio_out = 4'bzzzz;
+`endif // VERILATOR
     end
 
     always @ (posedge sck, posedge ss_n, negedge ss_n) begin
         if (ss_n) begin
             state <= STATE_COMMAND;
             counter <= 5'd0;
+`ifdef VERILATOR
+            sio_out <= 4'b0000;
+`else // VERILATOR
             sio_out <= 4'bzzzz;
+`endif // VERILATOR
         end else if (sck && !ss_n) begin
             case (state)
                 STATE_COMMAND: begin
@@ -125,7 +132,11 @@ module qspi_sram
                 end
 
                 STATE_READ: begin
+`ifdef VERILATOR
+                    sio_out <= {2'b00, read_buffer[7], 1'b0};
+`else // VERILATOR
                     sio_out <= {2'bzz, read_buffer[7], 1'bz};
+`endif // VERILATOR
                     read_buffer <= next_read_buffer;
                     if (counter == 5'd0) begin
                         address <= address + 24'd1;
@@ -184,7 +195,7 @@ module qspi_sram
                     end
                 end
 
-                STATE_FAIL: begin
+                default: begin
                     
                 end
             endcase

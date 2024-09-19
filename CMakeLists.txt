@@ -1,10 +1,13 @@
 cmake_minimum_required(VERSION 3.16)
 
+list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR})
+
 project(tt09-levenshtein LANGUAGES CXX)
 
 find_package(verilator REQUIRED)
 find_package(Git REQUIRED)
 find_package(Python COMPONENTS Interpreter REQUIRED)
+find_package(fmt CONFIG REQUIRED)
 
 add_executable(tt09-levenshtein
     sim/main.cpp
@@ -14,19 +17,23 @@ target_compile_features(tt09-levenshtein PRIVATE cxx_std_20)
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     target_compile_options(tt09-levenshtein PRIVATE -Wall -W -Wextra -Wno-unused-parameter -Wno-unused-variable -Wno-sign-compare $<$<CONFIG:Release>:-march=native -flto>)
 endif()
-target_link_libraries(tt09-levenshtein PRIVATE $<$<CONFIG:Release>:-flto>)
+target_link_libraries(tt09-levenshtein PRIVATE fmt::fmt-header-only)
+target_link_options(tt09-levenshtein PRIVATE $<$<CONFIG:Release>:-flto>)
 
 verilate(tt09-levenshtein
-    TOP_MODULE tt_um_levenshtein
+    TOP_MODULE top
+    TRACE
     OPT_FAST "-O3 -march=native -flto"
     VERILATOR_ARGS -Wall -I${CMAKE_CURRENT_SOURCE_DIR}/src
     SOURCES
+    sim/top.v
     src/tt_um_levenshtein.v
     src/levenshtein_controller.sv
     src/uart2wb.sv
     src/spi_controller.sv
     src/wb_arbiter.sv
     src/wb_interconnect.sv
+    test/qspi_sram.sv
 )
 
 add_custom_command(

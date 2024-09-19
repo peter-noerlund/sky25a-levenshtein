@@ -115,6 +115,8 @@ async def test_project(dut):
     for i in range(0, 256 * 2):
         await wb_write(dut, BITVECTOR_ADDR_BASE + i, 0x00)
 
+    # Search
+
     search_word = "hest"
     vector_map = dict()
     for c in search_word:
@@ -131,12 +133,12 @@ async def test_project(dut):
     await wb_write(dut, LENGTH_ADDR, len(search_word))
 
     mask = 1 << (len(search_word) - 1)
-    await wb_write(dut, MASK_ADDR_HI, mask & 0xFF)
+    await wb_write(dut, MASK_ADDR_HI, (mask >> 8) & 0xFF)
     await wb_write(dut, MASK_ADDR_LO, mask & 0xFF)
 
     vp = (1 << len(search_word)) - 1
-    await wb_write(dut, VP_ADDR_HI, vp)
-    await wb_write(dut, VP_ADDR_LO, vp)
+    await wb_write(dut, VP_ADDR_HI, (vp >> 8) & 0xFF)
+    await wb_write(dut, VP_ADDR_LO, vp & 0xFF)
 
     await wb_write(dut, CTRL_ADDR, 0x01)
 
