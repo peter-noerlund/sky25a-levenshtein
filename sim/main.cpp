@@ -30,7 +30,7 @@ nonstd::lazy<void> runTest(Simulator<Vtop>& sim)
         testConfig.dictionaryWordCount = 1024;
         testConfig.minSearchWordLength = 1;
         testConfig.maxSearchWordLength = 16;
-        testConfig.searchWordCount = 32;
+        testConfig.searchWordCount = 256;
 
         TestSet testSet(testConfig);
 
