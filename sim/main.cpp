@@ -23,7 +23,7 @@ nonstd::lazy<void> runTest(Simulator<Vtop>& sim)
 
         TestSet::Config testConfig;
         testConfig.minChar = 'a';
-        testConfig.maxChar = 'z';
+        testConfig.maxChar = 'f';
         testConfig.minDictionaryWordLength = 1;
         testConfig.maxDictionaryWordLength = 32;
         testConfig.dictionaryWordCount = 1024;
@@ -43,13 +43,12 @@ nonstd::lazy<void> runTest(Simulator<Vtop>& sim)
 
         co_await accel.loadDictionary(testSet.dictionaryWords());
 
-        fmt::println("Dictionary loaded");
+        fmt::println("Searching for words");
 
         for (const auto& searchWord : testSet.searchWords())
         {
-            fmt::println("Searching for {}", searchWord);
             auto result = co_await accel.search(searchWord);
-            fmt::println("searchWord={}  idx={} ({})  distance={}", searchWord, result.index, testSet.dictionaryWords()[result.index], result.distance);
+            fmt::println("  searchWord={}  idx={} ({})  distance={}", searchWord, result.index, testSet.dictionaryWords()[result.index], result.distance);
         }
     }
     catch (const std::exception& exception)
