@@ -11,6 +11,7 @@ find_package(fmt CONFIG REQUIRED)
 
 add_executable(tt09-levenshtein
     sim/main.cpp
+    sim/test_set.cpp
 )
 target_include_directories(tt09-levenshtein PRIVATE sim)
 target_compile_features(tt09-levenshtein PRIVATE cxx_std_20)

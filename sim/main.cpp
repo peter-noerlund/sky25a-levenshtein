@@ -2,6 +2,7 @@
 #include "nonstd/ensure_started.h"
 #include "nonstd/lazy.h"
 #include "uart.h"
+#include "test_set.h"
 #include "wishbone.h"
 #include "Vtop.h"
 
@@ -14,21 +15,47 @@
 template<typename Vtop>
 nonstd::lazy<void> runTest(Simulator<Vtop>& sim)
 {
-    using UartType = Uart<Vtop>;
-    using WishboneType = Wishbone<Vtop, UartType>;
-    using AcceleratorType = Accelerator<Vtop, WishboneType>;
+    try
+    {
+        using UartType = Uart<Vtop>;
+        using WishboneType = Wishbone<Vtop, UartType>;
+        using AcceleratorType = Accelerator<Vtop, WishboneType>;
 
-    UartType uart(sim);
-    WishboneType bus(sim, uart);
-    AcceleratorType accel(sim, bus);
+        TestSet::Config testConfig;
+        testConfig.minChar = 'a';
+        testConfig.maxChar = 'z';
+        testConfig.minDictionaryWordLength = 1;
+        testConfig.maxDictionaryWordLength = 32;
+        testConfig.dictionaryWordCount = 1024;
+        testConfig.minSearchWordLength = 1;
+        testConfig.maxSearchWordLength = 16;
+        testConfig.searchWordCount = 32;
 
-    co_await accel.init();
+        TestSet testSet(testConfig);
 
-    auto dictionary = std::to_array<std::string_view>({"h", "he", "hes", "hest", "heste", "hesten"});
-    co_await accel.loadDictionary(dictionary);
+        UartType uart(sim);
+        WishboneType bus(sim, uart);
+        AcceleratorType accel(sim, bus);
 
-    auto result = co_await accel.search("hest");
-    fmt::println("idx={}  distance={}", result.index, result.distance);
+        co_await accel.init();
+
+        fmt::println("Loading dictionary...");
+
+        co_await accel.loadDictionary(testSet.dictionaryWords());
+
+        fmt::println("Dictionary loaded");
+
+        for (const auto& searchWord : testSet.searchWords())
+        {
+            fmt::println("Searching for {}", searchWord);
+            auto result = co_await accel.search(searchWord);
+            fmt::println("searchWord={}  idx={} ({})  distance={}", searchWord, result.index, testSet.dictionaryWords()[result.index], result.distance);
+        }
+    }
+    catch (const std::exception& exception)
+    {
+        fmt::println("Caught exception: {}", exception.what());
+    }
 
     sim.stop();
 }

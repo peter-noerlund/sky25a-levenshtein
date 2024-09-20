@@ -144,7 +144,7 @@ public:
 
         co_await m_bus.write(CtrlControlAddress, EnableFlag);
 
-        for (unsigned int i = 0; i != 20; ++i)
+        for (unsigned int i = 0; i != 1024; ++i)
         {
             co_await m_sim.clocks(5000);
 
