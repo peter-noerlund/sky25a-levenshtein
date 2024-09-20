@@ -106,23 +106,26 @@ module levenshtein_controller
             enabled <= 1'b0;
             wbs_ack_o <= 1'b0;
 
-            state <= STATE_READ_DICT;
             cyc <= 1'b0;
+
             dict_address <= DICT_ADDR_WIDTH'(0);
             d <= DISTANCE_WIDTH'(0);
             vp <= BITVECTOR_WIDTH'(0);
             vn <= BITVECTOR_WIDTH'(0);
-
+            state <= STATE_READ_DICT;
         end else begin
             if (wbs_cyc_i && wbs_stb_i && !wbs_ack_o) begin
                 if (wbs_we_i) begin
                     if (wbs_adr_i[2:0] == 3'(ADDR_CTRL)) begin
                         enabled <= wbs_dat_i[0];
                         error <= 1'b0;
+
+                        dict_address <= DICT_ADDR_WIDTH'(0);
                         d <= DISTANCE_WIDTH'(word_length);
                         vn <= BITVECTOR_WIDTH'(0);
                         vp <= initial_vp;
                         state <= STATE_READ_DICT;
+
                         idx <= ID_WIDTH'(0);
                         best_idx <= ID_WIDTH'(0);
                         best_distance <= DISTANCE_WIDTH'(-1);
