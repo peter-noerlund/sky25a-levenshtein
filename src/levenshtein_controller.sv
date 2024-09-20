@@ -56,7 +56,7 @@ module levenshtein_controller
 
     reg enabled;
     reg error;
-    reg [3:0] word_length;
+    reg [4:0] word_length;
     reg [BITVECTOR_WIDTH - 1 : 0] mask;
     reg [BITVECTOR_WIDTH - 1 : 0] initial_vp;
 
@@ -130,7 +130,7 @@ module levenshtein_controller
                         best_idx <= ID_WIDTH'(0);
                         best_distance <= DISTANCE_WIDTH'(-1);
                     end else if (wbs_adr_i[2:0] == 3'(ADDR_LENGTH)) begin
-                        word_length <= wbs_dat_i[3:0];
+                        word_length <= wbs_dat_i[4:0];
                     end else if (wbs_adr_i[2:0] == 3'(ADDR_MASK_HI)) begin
                         mask[15:8] <= wbs_dat_i;
                     end else if (wbs_adr_i[2:0] == 3'(ADDR_MASK_LO)) begin
