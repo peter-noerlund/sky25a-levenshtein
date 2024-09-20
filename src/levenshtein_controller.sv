@@ -113,6 +113,14 @@ module levenshtein_controller
             vp <= BITVECTOR_WIDTH'(0);
             vn <= BITVECTOR_WIDTH'(0);
             state <= STATE_READ_DICT;
+
+            idx <= ID_WIDTH'(0);
+            best_idx <= ID_WIDTH'(0);
+            best_distance <= DISTANCE_WIDTH'(-1);
+
+            word_length <= 5'd0;
+            mask <= 16'h0000;
+            initial_vp <= 16'h0000;
         end else begin
             if (wbs_cyc_i && wbs_stb_i && !wbs_ack_o) begin
                 if (wbs_we_i) begin
