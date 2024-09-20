@@ -55,7 +55,6 @@ module levenshtein_controller
     /* verilator lint_on UNUSEDPARAM */
 
     reg enabled;
-    reg error;
     reg [4:0] word_length;
     reg [BITVECTOR_WIDTH - 1 : 0] mask;
     reg [BITVECTOR_WIDTH - 1 : 0] initial_vp;
@@ -85,7 +84,7 @@ module levenshtein_controller
     assign wbs_err_o = 1'b0;
     assign wbs_rty_o = 1'b0;
     assign wbs_dat_o = 
-        (wbs_adr_i[1:0] == ADDR_STATE ? {6'b000000, error, enabled} :
+        (wbs_adr_i[1:0] == ADDR_STATE ? {7'b0000000, enabled} :
         (wbs_adr_i[1:0] == ADDR_DISTANCE ? best_distance :
         (wbs_adr_i[1:0] == ADDR_IDX_HI ? best_idx[15:8] : best_idx[7:0])));
 
@@ -126,7 +125,6 @@ module levenshtein_controller
                 if (wbs_we_i) begin
                     if (wbs_adr_i[2:0] == 3'(ADDR_CTRL)) begin
                         enabled <= wbs_dat_i[0];
-                        error <= 1'b0;
 
                         dict_address <= DICT_ADDR_WIDTH'(0);
                         d <= DISTANCE_WIDTH'(word_length);
@@ -173,7 +171,6 @@ module levenshtein_controller
                                 state <= STATE_READ_DICT;
                             end else if (wbm_dat_i == 8'hFF) begin
                                 enabled <= 1'b0;
-                                error <= 1'b0;
                             end else begin
                                 state <= STATE_READ_VECTOR_HI;
                             end
@@ -182,7 +179,6 @@ module levenshtein_controller
                         end else if (wbm_err_i || wbm_rty_i) begin
                             cyc <= 1'b0;
                             enabled <= 1'b0;
-                            error <= 1'b1;
                         end
                     end
 
@@ -195,7 +191,6 @@ module levenshtein_controller
                         end else if (wbm_err_i || wbm_rty_i) begin
                             cyc <= 1'b0;
                             enabled <= 1'b0;
-                            error <= 1'b1;
                         end
                     end
 
@@ -209,7 +204,6 @@ module levenshtein_controller
                         end else if (wbm_err_i || wbm_rty_i) begin
                             cyc <= 1'b0;
                             enabled <= 1'b0;
-                            error <= 1'b1;
                         end
                     end
 
