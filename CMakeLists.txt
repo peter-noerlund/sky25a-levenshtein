@@ -10,6 +10,7 @@ find_package(Python COMPONENTS Interpreter REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 
 add_executable(tt09-levenshtein
+    sim/levenshtein.cpp
     sim/main.cpp
     sim/test_set.cpp
 )

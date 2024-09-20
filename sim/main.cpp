@@ -1,4 +1,5 @@
 #include "accelerator.h"
+#include "levenshtein.h"
 #include "nonstd/ensure_started.h"
 #include "nonstd/lazy.h"
 #include "uart.h"
@@ -41,14 +42,28 @@ nonstd::lazy<void> runTest(Simulator<Vtop>& sim)
 
         fmt::println("Loading dictionary...");
 
-        co_await accel.loadDictionary(testSet.dictionaryWords());
+        auto dictionaryWords = testSet.dictionaryWords();
+
+        co_await accel.loadDictionary(dictionaryWords);
 
         fmt::println("Searching for words");
 
         for (const auto& searchWord : testSet.searchWords())
         {
             auto result = co_await accel.search(searchWord);
-            fmt::println("  searchWord={}  idx={} ({})  distance={}", searchWord, result.index, testSet.dictionaryWords()[result.index], result.distance);
+            if (result.index >= dictionaryWords.size())
+            {
+                throw std::runtime_error(fmt::format("Result index out of range ({} >= {}). Search word was {}", result.index, dictionaryWords.size(), searchWord).c_str());
+            }
+
+            auto word = dictionaryWords[result.index];
+            auto distance = levenshtein(searchWord, word);
+            if (result.distance != distance)
+            {
+                throw std::runtime_error(fmt::format("Invalid distance. Got {}, expected {}. Search word was {}, result index was {} ({})", result.distance, distance, searchWord, result.index, word).c_str());
+            }
+
+            fmt::println("  {}: {} (distance {})", searchWord, word, result.distance);
         }
     }
     catch (const std::exception& exception)
