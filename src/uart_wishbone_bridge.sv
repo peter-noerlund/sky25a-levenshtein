@@ -37,7 +37,6 @@ module uart_wishbone_bridge
     reg [2:0] state;
     reg [1:0] byte_counter;
     reg [2:0] bit_counter;
-    reg last_uart_rxd;
     reg cyc;
 
     // Data is transmitted little endian
@@ -65,7 +64,7 @@ module uart_wishbone_bridge
         end else begin
             case (state)
                 STATE_READ_UART_SYNC: begin
-                    if (last_uart_rxd && !uart_rxd) begin
+                    if (!uart_rxd) begin
                         state <= STATE_READ_UART_START_BIT;
                     end
                 end
@@ -73,10 +72,13 @@ module uart_wishbone_bridge
                 STATE_READ_UART_START_BIT: begin
                     if (clk_counter[2:0] == 3'd6) begin
                         clk_counter[2:0] <= 3'd0;
-                        state <= STATE_READ_UART_DATA_BITS;
+                        if (!uart_rxd) begin
+                            state <= STATE_READ_UART_DATA_BITS;
+                        end else begin
+                            state <= STATE_READ_UART_SYNC;
+                        end
                     end else begin
-                        //assert(clk_counter < 5'd8);
-                        clk_counter <= clk_counter + 3'd1;
+                        clk_counter <= clk_counter + 4'd1;
                     end
                 end
 
@@ -93,12 +95,16 @@ module uart_wishbone_bridge
 
                 STATE_READ_UART_STOP_BIT: begin
                     if (clk_counter == 4'd15) begin
-                        if (uart_rxd == 1'b1 && byte_counter == 2'd3) begin
-                            state <= STATE_WISHBONE;
-                        end else begin
+                        if (!uart_rxd) begin
                             state <= STATE_READ_UART_SYNC;
+                        end else begin
+                            if (byte_counter == 2'd3) begin
+                                state <= STATE_WISHBONE;
+                            end else begin
+                                state <= STATE_READ_UART_SYNC;
+                            end
+                            byte_counter <= byte_counter + 2'd1;
                         end
-                        byte_counter <= byte_counter + 2'd1;
                     end
                     clk_counter <= clk_counter + 4'd1;
                 end
@@ -155,7 +161,5 @@ module uart_wishbone_bridge
                 end
             endcase
         end
-
-        last_uart_rxd <= uart_rxd;
     end
 endmodule
