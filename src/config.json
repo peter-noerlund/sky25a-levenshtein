@@ -31,9 +31,8 @@
   "//": "https://tinytapeout.com/faq/#how-can-i-map-an-additional-external-clock-to-one-of-the-gpios",
   "CLOCK_PORT": "clk",
 
-  "//": "Various tweaks",
-  "DESIGN_REPAIR_MAX_SLEW_PCT": 20,
-  "GRT_DESIGN_REPAIR_MAX_SLEW_PCT": 10,
+  "//": "Try to fix slew",
+  "DESIGN_REPAIR_MAX_SLEW_PCT": 40,
 
   "//": "Configuration docs: https://openlane.readthedocs.io/en/latest/reference/configuration.html",
 
