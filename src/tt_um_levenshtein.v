@@ -75,7 +75,7 @@ module tt_um_levenshtein
     wire ctrl_slave_sel;
     /* verilator lint_on UNUSEDSIGNAL */
 
-    uart2wb uart(
+    uart_wishbone_bridge uart(
         .clk_i(clk),
         .rst_i(!rst_n),
 

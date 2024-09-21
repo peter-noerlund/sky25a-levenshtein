@@ -1,6 +1,6 @@
 `default_nettype none
 
-module uart2wb
+module uart_wishbone_bridge
     (
         input wire clk_i,
         input wire rst_i,

@@ -19,8 +19,8 @@ project:
   source_files:
     - tt_um_levenshtein.v
     - levenshtein_controller.sv
-    - uart2wb.sv
     - spi_controller.sv
+    - uart_wishbone_bridge.sv
     - wb_arbiter.sv
     - wb_interconnect.sv
 

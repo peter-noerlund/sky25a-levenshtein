@@ -31,8 +31,8 @@ verilate(tt09-levenshtein
     sim/top.v
     src/tt_um_levenshtein.v
     src/levenshtein_controller.sv
-    src/uart2wb.sv
     src/spi_controller.sv
+    src/uart_wishbone_bridge.sv
     src/wb_arbiter.sv
     src/wb_interconnect.sv
     test/qspi_sram.sv
@@ -86,5 +86,18 @@ add_custom_target(
     test
     COMMAND . ../venv/bin/activate && make -B
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tt/tt_tool.py ${CMAKE_CURRENT_SOURCE_DIR}/venv/bin/python
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/test
+)
+
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/test/gate_level_netlist.v
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/runs/wokwi/final/pnl/tt_um_levenshtein.pnl.v
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/runs/wokwi/final/pnl/tt_um_levenshtein.pnl.v ${CMAKE_CURRENT_SOURCE_DIR}/test/gate_level_netlist.v
+)
+
+add_custom_target(
+    test-gates
+    COMMAND . ../venv/bin/activate && make -B GATES=yes
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tt/tt_tool.py ${CMAKE_CURRENT_SOURCE_DIR}/venv/bin/python ${CMAKE_CURRENT_SOURCE_DIR}/test/gate_level_netlist.v
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/test
 )
