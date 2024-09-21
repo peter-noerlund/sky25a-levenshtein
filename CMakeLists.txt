@@ -47,7 +47,7 @@ add_custom_command(
 
 add_custom_command(
     OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/tt/tt_tool.py
-    COMMAND ${GIT_EXECUTABLE} clone -b tt08 https://github.com/TinyTapeout/tt-support-tools tt
+    COMMAND ${GIT_EXECUTABLE} clone -b tt09 https://github.com/TinyTapeout/tt-support-tools tt
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
