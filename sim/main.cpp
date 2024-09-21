@@ -74,14 +74,6 @@ nonstd::lazy<void> runTest(Simulator<Vtop>& sim)
     sim.stop();
 }
 
-template<typename Vtop>
-nonstd::lazy<void> stopAtClock(Simulator<Vtop>& sim, unsigned int maxClocks)
-{
-    co_await sim.clocks(maxClocks);
-    fmt::println("Timeout");
-    sim.stop();
-}
-
 int main(int argc, char** argv)
 {
 	Verilated::commandArgs(argc, argv);
@@ -90,7 +82,6 @@ int main(int argc, char** argv)
     Simulator<Vtop> simulator;
 
     auto mainTest = runTest(simulator) | nonstd::ensure_started();
-    auto abortTask = stopAtClock(simulator, 1024 * 1024 * 1024) | nonstd::ensure_started();
 
     simulator.run();
 
