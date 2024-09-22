@@ -23,13 +23,13 @@ Each command consists of 4 input bytes and 1 output byte:
 
 | Byte | Bit | Description                               |
 |------|-----|-------------------------------------------|
-| 0    | 7   | READ=`0` WRUTE=`1`                        |
+| 0    | 7   | READ=`0` WRITE=`1`                        |
 | 0    | 6-0 | Address bit 22-16                         |
 | 1    | 7-0 | Address bit 15-8                          |
 | 2    | 7-0 | Address bit 7-0                           |
 | 3    | 7-0 | Byte to write if WRITE, otherwise ignored |
 
-**Output byts:**
+**Output bytes:**
 
 | Byte | Bit | Description                              |
 |------|-----|------------------------------------------|
@@ -53,6 +53,7 @@ The address space is basically as follows
 The registers have a different layout for read and write.
 
 **Write:**
+
 | Address  | Size | Description      |
 |----------|------|------------------|
 | 0x000000 | 1    | Control register |
@@ -61,6 +62,7 @@ The registers have a different layout for read and write.
 | 0x000004 | 2    | Initial VP value |
 
 **Read:**
+
 | Address  | Size | Description     |
 |----------|------|-----------------|
 | 0x000000 | 1    | Status register |
