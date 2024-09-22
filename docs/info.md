@@ -23,7 +23,7 @@ tt09-levenshtein is a fuzzy search engine which can find the best matching word 
 
 ## How to test
 
-Explain how to use your project
+TODO
 
 ## External hardware
 
