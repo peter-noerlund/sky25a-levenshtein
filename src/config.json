@@ -32,7 +32,6 @@
   "CLOCK_PORT": "clk",
 
   "//": "Fix slew and get more expressive cell names",
-  "SYNTH_AUTONAME": true,
   "DESIGN_REPAIR_MAX_SLEW_PCT": 40,
   "DESIGN_REPAIR_MAX_CAT_PCI": 40,
   "DESIGN_REPAIR_REMOVE_BUFFERS": true,
