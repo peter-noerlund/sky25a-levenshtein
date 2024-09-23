@@ -56,7 +56,7 @@ add_custom_command(
     COMMAND ${Python_EXECUTABLE} -m venv venv
     COMMAND venv/bin/pip install --upgrade pip
     COMMAND venv/bin/pip install -r tt/requirements.txt
-    COMMAND venv/bin/pip install openlane==2.1.5
+    COMMAND venv/bin/pip install openlane==2.1.7
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tt/tt_tool.py
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
