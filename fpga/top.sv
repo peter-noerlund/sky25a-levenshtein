@@ -3,9 +3,10 @@
 module top
     (
         input  wire ICE_CLK,
-        input wire USB_RXD_MOSI,
-        output wire USB_TXD_SCK,
-        inout wire [7:0] PMOD
+        output wire USB_RXD_MOSI,
+        input wire USB_TXD_SCK,
+        inout wire [7:0] PMOD,
+        output wire LED4
     );
 
     wire clk;
@@ -17,9 +18,10 @@ module top
     wire [7:0] uio_out;
     wire [7:0] uio_oe;
 
-    assign ui_in[3] = USB_RXD_MOSI;
-    assign uo_out[4] = USB_TXD_SCK;
+    assign ui_in[3] = USB_TXD_SCK;
+    assign USB_RXD_MOSI = uo_out[4];
     assign rst_n = clk_locked;
+    assign LED4 = clk_locked;
 
     pll pll(
         .clock_in(ICE_CLK),
@@ -44,6 +46,6 @@ module top
         .uo_out(uo_out),
         .uio_in(uio_in),
         .uio_out(uio_out),
-        .uio_oe(uio_oe),
+        .uio_oe(uio_oe)
     );
 endmodule

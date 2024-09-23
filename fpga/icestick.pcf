@@ -42,7 +42,7 @@ set_io --warn-no-port PMOD[6] 90       #IOR_58 (PIO)
 set_io --warn-no-port PMOD[7] 91       #IOR_59 (PIO)
 
 # LEDs
-#set_io --warn-no-port LED4 95          #IOR_62 (PIO)
+set_io --warn-no-port LED4 95          #IOR_62 (PIO)
 #set_io --warn-no-port LED3 96          #IOR_63 (PIO)
 #set_io --warn-no-port LED2 97          #IOR_64 (PIO)
 #set_io --warn-no-port LED1 98          #IOR_65 (PIO)
