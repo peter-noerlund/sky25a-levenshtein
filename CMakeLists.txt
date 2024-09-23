@@ -93,4 +93,9 @@ add_custom_target(
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/test
 )
 
+add_executable(uart_wb tools/uart_wb.cpp)
+target_compile_features(uart_wb PRIVATE cxx_std_20)
+target_compile_options(uart_wb PRIVATE -Wall -W -Wextra -Wpedantic)
+target_link_libraries(uart_wb PRIVATE fmt::fmt-header-only)
+
 add_subdirectory(fpga)
