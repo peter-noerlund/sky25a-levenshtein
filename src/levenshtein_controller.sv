@@ -32,7 +32,7 @@ module levenshtein_controller
         output reg wbs_ack_o,
         output wire wbs_err_o,
         output wire wbs_rty_o,
-        output wire [7:0] wbs_dat_o
+        output reg [7:0] wbs_dat_o
         //! @end
     );
 
@@ -40,19 +40,15 @@ module levenshtein_controller
     localparam DISTANCE_WIDTH = 8;
     localparam ID_WIDTH = 16;
 
-    localparam ADDR_CTRL = 0;
-    localparam ADDR_LENGTH = 1;
-    localparam ADDR_MASK_HI = 2;
-    localparam ADDR_MASK_LO = 3;
-    localparam ADDR_INITIAL_VP_HI = 4;
-    localparam ADDR_INITIAL_VP_LO = 5;
-
-    localparam ADDR_STATE = 2'd0;
-    localparam ADDR_DISTANCE = 2'd1;
-    localparam ADDR_IDX_HI = 2'd2;
-    /* verilator lint_off UNUSEDPARAM */
-    localparam ADDR_IDX_LO = 2'd3;
-    /* verilator lint_on UNUSEDPARAM */
+    localparam ADDR_CTRL = 4'd0;
+    localparam ADDR_LENGTH = 4'd1;
+    localparam ADDR_MASK_HI = 4'd2;
+    localparam ADDR_MASK_LO = 4'd3;
+    localparam ADDR_INITIAL_VP_HI = 4'd4;
+    localparam ADDR_INITIAL_VP_LO = 4'd5;
+    localparam ADDR_DISTANCE = 4'd6;
+    localparam ADDR_IDX_HI = 4'd8;
+    localparam ADDR_IDX_LO = 4'd9;
 
     reg enabled;
     reg [4:0] word_length;
@@ -83,11 +79,6 @@ module levenshtein_controller
 
     assign wbs_err_o = 1'b0;
     assign wbs_rty_o = 1'b0;
-    assign wbs_dat_o = 
-        (wbs_adr_i[1:0] == ADDR_STATE ? {7'b0000000, enabled} :
-        (wbs_adr_i[1:0] == ADDR_DISTANCE ? best_distance :
-        (wbs_adr_i[1:0] == ADDR_IDX_HI ? best_idx[15:8] : best_idx[7:0])));
-
     assign wbm_cyc_o = cyc;
     assign wbm_stb_o = cyc;
     assign wbm_adr_o =
@@ -99,6 +90,21 @@ module levenshtein_controller
     assign d0 = (((pm & vp) + vp) ^ vp) | pm | vn;
     assign hp = vn | ~(d0 | vp);
     assign hn = d0 & vp;
+
+    always_comb begin
+        case (wbs_adr_i[3:0])
+            ADDR_CTRL: wbs_dat_o = {7'b000000, enabled};
+            ADDR_LENGTH: wbs_dat_o = {3'b000, word_length};
+            ADDR_MASK_HI: wbs_dat_o = mask[15:8];
+            ADDR_MASK_LO: wbs_dat_o = mask[7:0];
+            ADDR_INITIAL_VP_HI: wbs_dat_o = initial_vp[15:8];
+            ADDR_INITIAL_VP_LO: wbs_dat_o = initial_vp[7:0];
+            ADDR_DISTANCE: wbs_dat_o = best_distance;
+            ADDR_IDX_HI: wbs_dat_o = best_idx[15:8];
+            ADDR_IDX_LO: wbs_dat_o = best_idx[7:0];
+            default: wbs_dat_o = 8'h00;
+        endcase
+    end
 
     always @ (posedge clk_i) begin
         if (rst_i) begin

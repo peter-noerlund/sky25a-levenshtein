@@ -20,23 +20,14 @@ class Accelerator
         ErrorFlag = 0x02
     };
 
-    enum ControlAddress : std::uint32_t
+    enum Address : std::uint32_t
     {
-        CtrlControlAddress = 0x0000000,
-        CtrlLengthAddress = 0x000001,
-        CtrlMaskAddress = 0x000002,
-        CtrlVpAddress = 0x000004
-    };
-
-    enum StatusAddress : std::uint32_t
-    {
-        StatusStatusAddress = 0x0000000,
-        StatusDistanceAddress = 0x0000001,
-        StatusIndexAddress = 0x0000002,
-    };
-
-    enum BaseAddress : std::uint32_t
-    {
+        ControlAddress = 0x0000000,
+        LengthAddress = 0x000001,
+        MaskAddress = 0x000002,
+        VpAddress = 0x000004,
+        DistanceAddress = 0x0000006,
+        IndexAddress = 0x0000008,
         BaseBitvectorAddress = 0x400000,
         BaseDictionaryAddress = 0x600000
     };
@@ -97,8 +88,8 @@ public:
 
         // Verify accelerator is idle
 
-        auto status = co_await m_bus.read(StatusStatusAddress);
-        if ((status & EnableFlag) != 0)
+        auto ctrl = co_await m_bus.read(ControlAddress);
+        if ((ctrl & EnableFlag) != 0)
         {
             throw std::runtime_error("Cannot search while another search is in progress");
         }
@@ -130,45 +121,41 @@ public:
 
         // Set up the rest
 
-        co_await m_bus.write(CtrlLengthAddress, word.size());
+        co_await m_bus.write(LengthAddress, word.size());
 
         std::uint16_t mask = 1 << (word.size() - 1);
         tmp = {static_cast<std::uint8_t>(mask >> 8), static_cast<std::uint8_t>(mask)};
-        co_await m_bus.write(CtrlMaskAddress, tmp);
+        co_await m_bus.write(MaskAddress, tmp);
 
         std::uint16_t vp = (1 << word.size()) - 1;
         tmp = {static_cast<std::uint8_t>(vp >> 8), static_cast<std::uint8_t>(vp)};
-        co_await m_bus.write(CtrlVpAddress, tmp);
+        co_await m_bus.write(VpAddress, tmp);
 
         // Initiate search
 
-        co_await m_bus.write(CtrlControlAddress, EnableFlag);
+        co_await m_bus.write(ControlAddress, EnableFlag);
 
         for (unsigned int i = 0; i != 1024 * 1024; ++i)
         {
             co_await m_sim.clocks(5000);
 
-            status = co_await m_bus.read(StatusStatusAddress);
-            if ((status & EnableFlag) == 0)
+            ctrl = co_await m_bus.read(ControlAddress);
+            if ((ctrl & EnableFlag) == 0)
             {
                 break;
             }
         }
 
-        if ((status & EnableFlag) == EnableFlag)
+        if ((ctrl & EnableFlag) == EnableFlag)
         {
             throw std::runtime_error("Accelerator didn't finish in time");
-        }
-        if ((status & ErrorFlag) == ErrorFlag)
-        {
-            throw std::runtime_error("Accelerator failed with an error");
         }
 
         // Read result
         Result result;
-        result.distance = co_await m_bus.read(StatusDistanceAddress);
+        result.distance = co_await m_bus.read(DistanceAddress);
 
-        auto buffer = co_await m_bus.read(StatusIndexAddress, 2);
+        auto buffer = co_await m_bus.read(IndexAddress, 2);
         result.index = (static_cast<std::uint16_t>(buffer[0]) << 8) | buffer[1];
 
         // Clear bitvectors

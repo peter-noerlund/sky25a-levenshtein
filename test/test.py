@@ -90,11 +90,9 @@ async def test_project(dut):
     MASK_ADDR_LO = 0x000003
     VP_ADDR_HI = 0x000004
     VP_ADDR_LO = 0x000005
-
-    STATUS_ADDR = 0x000000
-    DISTANCE_ADDR = 0x000001
-    IDX_ADDR_HI = 0x000002
-    IDX_ADDR_LO = 0x000003
+    DISTANCE_ADDR = 0x000006
+    IDX_ADDR_HI = 0x000008
+    IDX_ADDR_LO = 0x000009
 
     DICT_ADDR_BASE = 0x600000
     BITVECTOR_ADDR_BASE = 0x400000
@@ -140,17 +138,25 @@ async def test_project(dut):
     await wb_write(dut, VP_ADDR_HI, (vp >> 8) & 0xFF)
     await wb_write(dut, VP_ADDR_LO, vp & 0xFF)
 
+    # verify data is written
+    assert await wb_read(dut, LENGTH_ADDR) == len(search_word)
+    assert await wb_read(dut, MASK_ADDR_HI) == (mask >> 8) & 0xFF
+    assert await wb_read(dut, MASK_ADDR_LO) == mask & 0xFF
+    assert await wb_read(dut, VP_ADDR_HI) == (vp >> 8) & 0xFF
+    assert await wb_read(dut, VP_ADDR_LO) == vp & 0xFF
+
     await wb_write(dut, CTRL_ADDR, 0x01)
+
+    assert (await wb_read(dut, CTRL_ADDR) & 0x01) == 0x01
 
     for i in range(0, 20):
         await Timer(100, units="us")
 
-        state = await wb_read(dut, STATUS_ADDR)
+        state = await wb_read(dut, CTRL_ADDR)
         if state & 0x01 == 0:
             break
 
     assert state & 0x01 == 0
-    assert state & 0x02 == 0
 
     distance = await wb_read(dut, DISTANCE_ADDR)
 

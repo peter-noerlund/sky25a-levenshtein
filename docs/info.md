@@ -42,46 +42,32 @@ As indicated by the UART protocol, the address space is 23 bits.
 
 The lower half of the memory space is used for registers and the upper half of the memory space is accessing an external SPI PSRAM.
 
-The address space is basically as follows
+The address space is basically as follows:
 
-| Address           | Usable Size | Description    |
-|-------------------|-------------|----------------|
-| 0x000000-0x3FFFFF |          6B | Registers      |
-| 0x400000-0x5FFFFF |        512B | Bitvectors     |
-| 0x600000-0x7FFFFF |         2MB | Dictionary     |
-
-The registers have a different layout for read and write.
-
-**Write:**
-
-| Address  | Size | Description      |
-|----------|------|------------------|
-| 0x000000 | 1    | Control register |
-| 0x000001 | 1    | Word length      |
-| 0x000002 | 2    | Mask             |
-| 0x000004 | 2    | Initial VP value |
-
-**Read:**
-
-| Address  | Size | Description     |
-|----------|------|-----------------|
-| 0x000000 | 1    | Status register |
-| 0x000001 | 1    | Distance        |
-| 0x000002 | 2    | Word index      |
+| Address  | Size | Access | Identifier  | Type | Description          |
+|----------|------|--------|-------------|------|----------------------|
+| 0x000000 | 1    | R/W    | `CTRL`      | Reg  | Control register     |
+| 0x000001 | 1    | R/W    | `LENGTH`    | Reg  | Word length          |
+| 0x000002 | 2    | R/W    | `MASK`      | Reg  | Mask                 |
+| 0x000004 | 2    | R/W    | `VP`        | Reg  | Initial VP value     |
+| 0x000006 | 1    | R/O    | `DISTANCE`  | Reg  | Levenshtein distance |
+| 0x000008 | 2    | R/O    | `INDEX`     | Reg  | Word index           |
+| 0x400000 | 512  | R/W    | `VECTORMAP` | SPI  | Vector map           |
+| 0x600000 | 2M   | R/W    | `DICT`      | SPI  | Dictionary           |
 
 #### Operation
 
 ##### Initialization
 
-Before doing anything, the bitvector memory needs to be filled with `0x00`. That is the 512 bytes from `0x400000` to `0x4001FF`. This is only necessary to do once after power up.
+Before doing anything, the vector map (`VECTORMAP`) needs to be filled with `0x00`. This is to reduce the work necessary when starting a search and is only necessary once after power up.
 
 ##### Store dictionary
 
-Next, you need to store a dictionary in the SRAM. The dictionary needs to be stored at address `0x600000`. Each word must be encoded using 1 bit character, cannot use `0xFE` and `0xFF` and must not exceed 255 characters. Each word is terminated with the byte value `0xFE` and the dictionary itself is terminated by the byte value `0xFF`. In total there can be no more than 65535 words and the whole list must not exceed 2MB.
+Next, you need to store a dictionary in the dictionary memory (`DICT`). The dictionary is stored as a sequence of words, encoded using 1 bit per character. Each word is terminated with the byte value `0xFE` and the dictionary itself is terminated by the byte value `0xFF`. In total there can be no more than 65535 words and the whole list must not exceed 2MB.
 
 ##### Perform fuzzy matching
 
-To perform a fuzzy search, you first need to generate a map of 16-bit vectors based on the input word.
+To perform a fuzzy search, you first need to populate the vector map (`VECTORMAP`) based on the input word.
 
 For each character in the word, you produce a bit vector representing which position in the word holds the character.
 
@@ -100,23 +86,23 @@ o = 16'b00000010_00000000;  // _________o_
 n = 16'b00000100_00000000;  // __________n
 ```
 
-You then store each bitvector at address `0x400000 + char * 2`. The bitvectors is stored in bit endian byte order.
+You then store each bitvector at address `VECTORMAP + char * 2`. The bitvectors is stored in bit endian byte order.
 
-You then need to store the length in the word length register (address `0x000001`)
+You then need to store the length in the word length register (`LENGTH`)
 
-And a mask with the length-th bit set to 1 (`1 << (length - 1)`) in the 16-bit mask register (address `0x000002`) using bit endian byte order.
+And a mask with the length-th bit set to 1 (`1 << (length - 1)`) in the 16-bit mask register (address `MASK`) using bit endian byte order.
 
-And a VP value which is simly the first length bits set to 1 (`(1 << length) - 1`) in the 16-bit vp mast register (address `0x000004`) using big endian byte order.
+And a VP value which is simly the first length bits set to 1 (`(1 << length) - 1`) in the 16-bit vp mast register (address `VP`) using big endian byte order.
 
-Finally, you store a `1` in the control register at address `0x000000`.
+Finally, you store a `1` in the control register at address `CTRL`.
 
 The accelerator will now scan through the dictionary to find matches.
 
-To know when the algorithm is done, you poll the status register (address `0x000000`) at a regular interval until the 0th bit is 0.
+To know when the algorithm is done, you poll the control register (`CTRL`) at a regular interval until the least significant bit bit is 0.
 
-You can then read out the levenshtein distance at address `0x000001` and the index of the word in the dictionary which was the best match at `0x000002` (big endian).
+You can then read out the levenshtein distance at address `DISTANCE` and the index of the word in the dictionary which was the best match at `INDEX` (big endian).
 
-Finally, you need to clear the bitvectors before the next search. Instead of filling the entire 512 bytes with `0x00`, you simply clear the bitvector positions you set earlier (in the example that would be `a`, `p`, `l`, `i`, `c`, `t`, `o`, and `n`)
+Finally, you need to clear the vector map (`VECTORMAP`) before the next search. Instead of filling the entire 512 bytes with `0x00`, you simply clear the bitvector positions you set earlier (in the example that would be `a`, `p`, `l`, `i`, `c`, `t`, `o`, and `n`)
 
 ## How to test
 
