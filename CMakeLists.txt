@@ -22,6 +22,9 @@ endif()
 target_link_libraries(tt09-levenshtein PRIVATE fmt::fmt-header-only)
 target_link_options(tt09-levenshtein PRIVATE $<$<CONFIG:Release>:-flto>)
 
+
+file(GLOB VERILOG_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.v ${CMAKE_CURRENT_SOURCE_DIR}/src/*.sv )
+
 verilate(tt09-levenshtein
     TOP_MODULE top
     TRACE
@@ -29,13 +32,8 @@ verilate(tt09-levenshtein
     VERILATOR_ARGS -Wall -I${CMAKE_CURRENT_SOURCE_DIR}/src
     SOURCES
     sim/top.v
-    src/tt_um_levenshtein.v
-    src/levenshtein_controller.sv
-    src/spi_controller.sv
-    src/uart_wishbone_bridge.sv
-    src/wb_arbiter.sv
-    src/wb_interconnect.sv
     test/qspi_sram.sv
+    ${VERILOG_SOURCES}
 )
 
 add_custom_command(
@@ -58,13 +56,6 @@ add_custom_command(
     COMMAND venv/bin/pip install -r tt/requirements.txt
     COMMAND venv/bin/pip install openlane==2.1.7
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tt/tt_tool.py
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-)
-
-add_custom_target(
-    fpga-bitstream
-    COMMAND . venv/bin/activate && tt/tt_tool.py --create-fpga-bitstream
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tt/tt_tool.py ${CMAKE_CURRENT_SOURCE_DIR}/venv/bin/python
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
@@ -101,3 +92,5 @@ add_custom_target(
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tt/tt_tool.py ${CMAKE_CURRENT_SOURCE_DIR}/venv/bin/python ${CMAKE_CURRENT_SOURCE_DIR}/test/gate_level_netlist.v
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/test
 )
+
+add_subdirectory(fpga)

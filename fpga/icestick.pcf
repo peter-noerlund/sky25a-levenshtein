@@ -1,0 +1,64 @@
+# IceStick
+
+# USB UART/SPI
+#set_io --warn-no-port USB_DCD_GPIOL3 1          #IOL_1A (DPIO)
+#set_io --warn-no-port USB_DSR_GPIOL2 2          #IOL_1B (DPIO)
+#set_io --warn-no-port USB_DTR_GPIOL1 3          #IOL_2A (DPIO)
+#set_io --warn-no-port USB_CTS_SS 4              #IOL_2B (DPIO)
+#set_io --warn-no-port USB_RTS_MISO 7            #IOL_3A (DPIO)
+set_io --warn-no-port USB_RXD_MOSI 8            #IOL_3B (DPIO)
+set_io --warn-no-port USB_TXD_SCK 9             #IOL_4A (DPIO)
+
+#set_frequency USB_TXD_SCK 30
+
+# Clock
+set_io --warn-no-port ICE_CLK 21       #IOL_7A_GBIN6 (GBIN)
+set_frequency ICE_CLK 12
+
+# 1x10 header (J3)
+#set_io --warn-no-port HDR2[0] 44       #IOB_30 (PIO)
+#set_io --warn-no-port HDR2[1] 45       #IOB_31 (PIO)
+#set_io --warn-no-port HDR2[2] 47       #IOB_47 (PIO)
+#set_io --warn-no-port HDR2[3] 48       #IOB_48 (PIO)
+#set_io --warn-no-port HDR2[4] 56       #IOB_37 (PIO)
+#set_io --warn-no-port HDR2[5] 60       #IOB_39 (PIO)
+#set_io --warn-no-port HDR2[6] 61       #IOB_40 (PIO)
+#set_io --warn-no-port HDR2[7] 62       #IOB_41 (PIO)
+
+# SPI
+#set_io --warn-no-port SPI_SO 67        #IOB_44_SDO (SPI)
+#set_io --warn-no-port SPI_SI 68        #IOB_45_SDI (SPI)
+#set_io --warn-no-port SPI_SCK 70       #IOB_46_SCK (SPI)
+#set_io --warn-no-port SPI_SS_B 71      #IOB_47_SS (SPI)
+
+# PMOD (J2)
+set_io --warn-no-port PMOD[0] 78       #IOR_52 (PIO)
+set_io --warn-no-port PMOD[1] 79       #IOR_53 (PIO)
+set_io --warn-no-port PMOD[2] 80       #IOR_54 (PIO)
+set_io --warn-no-port PMOD[3] 81       #IOR_55 (PIO)
+set_io --warn-no-port PMOD[4] 87       #IOR_56 (PIO)
+set_io --warn-no-port PMOD[5] 88       #IOR_57 (PIO)
+set_io --warn-no-port PMOD[6] 90       #IOR_58 (PIO)
+set_io --warn-no-port PMOD[7] 91       #IOR_59 (PIO)
+
+# LEDs
+#set_io --warn-no-port LED4 95          #IOR_62 (PIO)
+#set_io --warn-no-port LED3 96          #IOR_63 (PIO)
+#set_io --warn-no-port LED2 97          #IOR_64 (PIO)
+#set_io --warn-no-port LED1 98          #IOR_65 (PIO)
+#set_io --warn-no-port LED0 99          #IOR_66 (PIO)
+
+# IrDA
+#set_io --warn-no-port IRDA_TXD 105     #IOR_70 (PIO)
+#set_io --warn-no-port IRDA_RXD 106     #IOR_71 (PIO)
+#set_io --warn-no-port IRDA_SD 107      #IOR_82 (PIO)
+
+# 1x10 header (J1)
+#set_io --warn-no-port HDR1[0] 112      #IOT_73 (PIO)
+#set_io --warn-no-port HDR1[1] 113      #IOT_74 (PIO)
+#set_io --warn-no-port HDR1[2] 114      #IOT_75 (PIO)
+#set_io --warn-no-port HDR1[3] 115      #IOT_76 (PIO)
+#set_io --warn-no-port HDR1[4] 116      #IOT_77 (PIO)
+#set_io --warn-no-port HDR1[5] 117      #IOT_78 (PIO)
+#set_io --warn-no-port HDR1[6] 118      #IOT_79 (PIO)
+#set_io --warn-no-port HDR1[7] 119      #IOT_80 (PIO)
