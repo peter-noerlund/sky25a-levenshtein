@@ -6,61 +6,158 @@ from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles, Edge, FallingEdge, Timer
 
 
-async def uart_transmit(dut, value, period=320, period_units="ns"):
-    dut.ui_in.value = 0
+class Uart(object):
+    def __init__(self, dut, period=320, period_units="ns"):
+        self._dut = dut
+        self._period = period
+        self._period_units = period_units
+        self._dut.ui_in.value |= 0x08
 
-    await Timer(period, units=period_units)
+    async def send(self, value: int) -> None:
+        # Start bit
+        self._dut.ui_in.value = 0
+        await Timer(self._period, units=self._period_units)
 
-    for i in range(0, 8):
-        dut.ui_in.value = 0x00 if (value & (1 << i)) == 0 else 0x08
+        # Data bits
+        for i in range(0, 8):
+            self._dut.ui_in.value = 0x00 if (value & (1 << i)) == 0 else 0x08
+            await Timer(self._period, units=self._period_units)
 
-        await Timer(period, units=period_units)
-
-    dut.ui_in.value = 0x08
-
-    await Timer(period, units=period_units)
-
-
-async def uart_receive(dut, max_clock_cycles=10000, period=320, period_units="ns"):
-    value = 0
-
-    assert dut.uo_out[4] == 1
-
-    for i in range(0, max_clock_cycles):
-        await ClockCycles(dut.clk, 1)
-        if dut.uo_out[4] == 0:
-            break
-
-    assert dut.uo_out[4] == 0
-
-    await Timer(period * 1.5, units=period_units)
-
-    for i in range(0, 8):
-        value = value | (1 << i if dut.uo_out[4] == 1 else 0)
-
-        await Timer(period, units=period_units)
-
-    assert dut.uo_out[4] == 1
-
-    await Timer(period / 2, units=period_units)
-
-    return value
+        # Stop bit
+        self._dut.ui_in.value = 0x08
+        await Timer(self._period, units=self._period_units)
 
 
-async def wb_write(dut, addr, data):
-    await uart_transmit(dut, 0x80 | ((addr >> 16) & 0x7F))
-    await uart_transmit(dut, (addr >> 8) & 0xFF)
-    await uart_transmit(dut, addr & 0xFF)
-    await uart_transmit(dut, data)
-    await uart_receive(dut)
+    async def recv(self, max_clock_cycles=10000) -> int:
+        assert self._dut.uo_out[4] == 1
+
+        for i in range(0, max_clock_cycles):
+            await ClockCycles(self._dut.clk, 1)
+            if self._dut.uo_out[4] == 0:
+                break
+
+        assert self._dut.uo_out[4] == 0
+
+        await Timer(self._period * 1.5, units=self._period_units)
+
+        value = 0
+        for i in range(0, 8):
+            value = value | (1 << i if self._dut.uo_out[4] == 1 else 0)
+
+            await Timer(self._period, units=self._period_units)
+
+        assert self._dut.uo_out[4] == 1
+
+        await Timer(self._period / 2, units=self._period_units)
+
+        return value
 
 
-async def wb_read(dut, addr):
-    await uart_transmit(dut, (addr >> 16) & 0x7F)
-    await uart_transmit(dut, (addr >> 8) & 0xFF)
-    await uart_transmit(dut, addr & 0xFF)
-    await uart_transmit(dut, 0)
-    return await uart_receive(dut)
+class Wishbone(object):
+    def __init__(self, transport):
+        self._transport = transport
+
+    async def write(self, address: int, data: int) -> None:
+        await self._exec(0x80000000 | ((address & 0x7FFFFF) << 8) | data)
+
+    async def read(self, address: int) -> int:
+        return await self._exec((address & 0x7FFFFF) << 8)
+
+    async def _exec(self, data: int) -> int:
+        await self._transport.send((data >> 24) & 0xFF)
+        await self._transport.send((data >> 16) & 0xFF)
+        await self._transport.send((data >> 8) & 0xFF)
+        await self._transport.send(data & 0xFF)
+        return await self._transport.recv()
+
+
+class Accelerator(object):
+    CTRL_ADDR = 0
+    LENGTH_ADDR = 1
+    MASK_ADDR = 2
+    VP_ADDR = 4
+    DISTANCE_ADDR = 6
+    INDEX_ADDR = 8
+    VECTORMAP_BASE_ADDR = 0x400000
+    DICTIONARY_BASE_ADDR = 0x600000
+
+    ENABLE_FLAG = 1
+
+    def __init__(self, bus):
+        self._bus = bus
+
+    async def init(self):
+        for i in range(1, 256):
+            await self._bus.write(self.VECTORMAP_BASE_ADDR + i * 2, 0)
+            await self._bus.write(self.VECTORMAP_BASE_ADDR + i * 2 + 1, 0)
+
+    async def load_dictionary(self, words):
+        address = self.DICTIONARY_BASE_ADDR
+        for word in words:
+            for c in word:
+                await self._bus.write(address, ord(c))
+                address += 1
+            await self._bus.write(address, 0xFE)
+            address += 1
+        await self._bus.write(address, 0xFF)
+
+    async def search(self, search_word: str):
+        assert (await self._bus.read(self.CTRL_ADDR) & self.ENABLE_FLAG) == 0
+
+        vector_map = {}
+        for c in search_word:
+            vector = 0
+            for i in range(0, len(search_word)):
+                if search_word[i] == c:
+                    vector |= (1 << i)
+            vector_map[c] = vector
+
+        for c, vector in vector_map.items():
+            await self._bus.write(self.VECTORMAP_BASE_ADDR + ord(c) * 2, (vector >> 8) & 0xFF)
+            await self._bus.write(self.VECTORMAP_BASE_ADDR + ord(c) * 2 + 1, vector & 0xFF)
+
+        await self._bus.write(self.LENGTH_ADDR, len(search_word))
+
+        mask = 1 << (len(search_word) - 1)
+        await self._bus.write(self.MASK_ADDR, (mask >> 8) & 0xFF)
+        await self._bus.write(self.MASK_ADDR + 1, mask & 0xFF)
+
+        vp = (1 << len(search_word)) - 1
+        await self._bus.write(self.VP_ADDR, (vp >> 8) & 0xFF)
+        await self._bus.write(self.VP_ADDR + 1, vp & 0xFF)
+
+        # Verify
+        assert await self._bus.read(self.LENGTH_ADDR) == len(search_word)
+        assert await self._bus.read(self.MASK_ADDR) == (mask >> 8) & 0xFF
+        assert await self._bus.read(self.MASK_ADDR + 1) == mask & 0xFF
+        assert await self._bus.read(self.VP_ADDR) == (vp >> 8) & 0xFF
+        assert await self._bus.read(self.VP_ADDR + 1) == vp & 0xFF
+
+        await self._bus.write(self.CTRL_ADDR, self.ENABLE_FLAG)
+
+        assert (await self._bus.read(self.CTRL_ADDR) & self.ENABLE_FLAG) == self.ENABLE_FLAG
+
+        for i in range(0, 20):
+            await Timer(100, units="us")
+
+            ctrl = await self._bus.read(self.CTRL_ADDR)
+            if (ctrl & self.ENABLE_FLAG) == 0:
+                break
+
+        assert (ctrl & self.ENABLE_FLAG) == 0
+
+        for c in vector_map.keys():
+            await self._bus.write(self.VECTORMAP_BASE_ADDR + ord(c) * 2, 0x00)
+            await self._bus.write(self.VECTORMAP_BASE_ADDR + ord(c) * 2 + 1, 0x00)
+
+        distance = await self._bus.read(self.DISTANCE_ADDR)
+
+        idx_hi = await self._bus.read(self.INDEX_ADDR)
+        idx_lo = await self._bus.read(self.INDEX_ADDR + 1)
+
+        idx = (idx_hi << 8) | idx_lo
+
+        return (idx, distance)
 
 
 @cocotb.test()
@@ -69,7 +166,6 @@ async def test_project(dut):
 
     clock = Clock(dut.clk, 20, units="ns")
     cocotb.start_soon(clock.start())
-
 
     # Reset
     dut._log.info("Reset")
@@ -84,86 +180,17 @@ async def test_project(dut):
 
     await ClockCycles(dut.clk, 10)
 
-    CTRL_ADDR = 0x000000
-    LENGTH_ADDR = 0x000001
-    MASK_ADDR_HI = 0x000002
-    MASK_ADDR_LO = 0x000003
-    VP_ADDR_HI = 0x000004
-    VP_ADDR_LO = 0x000005
-    DISTANCE_ADDR = 0x000006
-    IDX_ADDR_HI = 0x000008
-    IDX_ADDR_LO = 0x000009
+    uart = Uart(dut)
+    wishbone = Wishbone(uart)
+    accel = Accelerator(wishbone)
 
-    DICT_ADDR_BASE = 0x600000
-    BITVECTOR_ADDR_BASE = 0x400000
-
-    # Save dictionary
+    await accel.init()
 
     words = ["h", "he", "hes", "hest", "heste", "hesten"]
-    address = DICT_ADDR_BASE
-    for word in words:
-        for c in word:
-            await wb_write(dut, address, ord(c))
-            address = address + 1
-        await wb_write(dut, address, 0xFE)
-        address = address + 1
-    await wb_write(dut, address, 0xFF)
+    await accel.load_dictionary(words)
 
-    # Clear bitmaps
-    for i in range(0, 256 * 2):
-        await wb_write(dut, BITVECTOR_ADDR_BASE + i, 0x00)
+    result = await accel.search("hest")
 
-    # Search
+    assert result[0] == 3
+    assert result[1] == 0
 
-    search_word = "hest"
-    vector_map = dict()
-    for c in search_word:
-        vector = 0
-        for i in range(0, len(search_word)):
-            if search_word[i] == c:
-                vector = vector | (1 << i)
-        vector_map[c] = vector
-
-    for c, vector in vector_map.items():
-        await wb_write(dut, BITVECTOR_ADDR_BASE + ord(c) * 2, (vector >> 8) & 0xFF)
-        await wb_write(dut, BITVECTOR_ADDR_BASE + ord(c) * 2 + 1, vector & 0xFF)
-
-    await wb_write(dut, LENGTH_ADDR, len(search_word))
-
-    mask = 1 << (len(search_word) - 1)
-    await wb_write(dut, MASK_ADDR_HI, (mask >> 8) & 0xFF)
-    await wb_write(dut, MASK_ADDR_LO, mask & 0xFF)
-
-    vp = (1 << len(search_word)) - 1
-    await wb_write(dut, VP_ADDR_HI, (vp >> 8) & 0xFF)
-    await wb_write(dut, VP_ADDR_LO, vp & 0xFF)
-
-    # verify data is written
-    assert await wb_read(dut, LENGTH_ADDR) == len(search_word)
-    assert await wb_read(dut, MASK_ADDR_HI) == (mask >> 8) & 0xFF
-    assert await wb_read(dut, MASK_ADDR_LO) == mask & 0xFF
-    assert await wb_read(dut, VP_ADDR_HI) == (vp >> 8) & 0xFF
-    assert await wb_read(dut, VP_ADDR_LO) == vp & 0xFF
-
-    await wb_write(dut, CTRL_ADDR, 0x01)
-
-    assert (await wb_read(dut, CTRL_ADDR) & 0x01) == 0x01
-
-    for i in range(0, 20):
-        await Timer(100, units="us")
-
-        state = await wb_read(dut, CTRL_ADDR)
-        if state & 0x01 == 0:
-            break
-
-    assert state & 0x01 == 0
-
-    distance = await wb_read(dut, DISTANCE_ADDR)
-
-    idx_hi = await wb_read(dut, IDX_ADDR_HI)
-    idx_lo = await wb_read(dut, IDX_ADDR_LO)
-    
-    idx = (idx_hi << 8) + idx_lo
-
-    assert idx == 3
-    assert distance == 0
