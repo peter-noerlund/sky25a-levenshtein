@@ -69,9 +69,9 @@ int main(int argc, char** argv)
     std::string searchWord;
 
     auto cli = lyra::cli()
-        | lyra::opt(dictionaryPath, "FILE")["-d"]["--dictionary"]("Load dictionary")
-        | lyra::opt(searchWord, "WORD")["-s"]["--search"]("Search for word")
         | lyra::opt(devicePath, "DEVICE")["-d"]["--device"]("Use device instead of verilog")
+        | lyra::opt(dictionaryPath, "FILE")["-l"]["--load-dictionary"]("Load dictionary")
+        | lyra::opt(searchWord, "WORD")["-s"]["--search"]("Search for word")
         | lyra::help(showHelp);
 
     auto result = cli.parse({argc, argv});
@@ -88,7 +88,7 @@ int main(int argc, char** argv)
 
     asio::io_context context;
 
-    asio::co_spawn(context, tt09_levenshtein::run(devicePath, dictionaryPath, searchWord), asio::detached);
+    asio::co_spawn(context, tt09_levenshtein::run(devicePath, vcdPath, dictionaryPath, searchWord), asio::detached);
 
     return context.run();
 }
