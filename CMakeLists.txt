@@ -4,12 +4,8 @@ list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 
 project(tt09-levenshtein LANGUAGES CXX)
 
-find_package(asio CONFIG REQUIRED)
-find_package(verilator REQUIRED)
 find_package(Git REQUIRED)
 find_package(Python COMPONENTS Interpreter REQUIRED)
-find_package(fmt CONFIG REQUIRED)
-find_package(lyra CONFIG REQUIRED)
 
 add_custom_command(
     OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/src/user_config.json
@@ -68,38 +64,7 @@ add_custom_target(
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/test
 )
 
-add_executable(uart_wb tools/uart_wb.cpp)
-target_compile_features(uart_wb PRIVATE cxx_std_20)
-target_compile_options(uart_wb PRIVATE -Wall -W -Wextra -Wpedantic)
-target_link_libraries(uart_wb PRIVATE fmt::fmt-header-only)
+file(GLOB VERILOG_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.v ${CMAKE_CURRENT_SOURCE_DIR}/src/*.sv )
 
-add_executable(client
-    client/client.cpp
-    client/levenshtein.cpp
-    client/main.cpp
-    client/real_context.cpp
-    client/real_uart.cpp
-    client/runner.cpp
-    client/test_set.cpp
-    client/uart_bus.cpp
-    client/verilator_context.cpp
-    client/verilator_uart.cpp
-)
-target_include_directories(client PRIVATE client)
-target_compile_features(client PRIVATE cxx_std_20)
-target_compile_options(client PRIVATE -Wall -W -Wextra -Wno-unused-parameter)
-target_link_libraries(client PRIVATE asio::asio fmt::fmt-header-only lyra)
-target_link_options(client PRIVATE $<$<CONFIG:Release>:-flto>)
-
-verilate(client
-    TOP_MODULE top
-    TRACE
-    OPT_FAST "-O3 -march=native -flto"
-    VERILATOR_ARGS -Wall -I${CMAKE_CURRENT_SOURCE_DIR}/src
-    SOURCES
-    client/top.v
-    test/qspi_sram.sv
-    ${VERILOG_SOURCES}
-)
-
+add_subdirectory(client)
 add_subdirectory(fpga)
