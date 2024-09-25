@@ -2,6 +2,8 @@
 
 #include "verilator_context.h"
 
+#include <fmt/printf.h>
+
 #include <stdexcept>
 
 namespace tt09_levenshtein
@@ -33,7 +35,7 @@ asio::awaitable<void> VerilatorUart::send(std::byte value)
     // Data bits
     for (unsigned int i = 0; i != 8; ++i)
     {
-        m_context.top().uart_rxd |= ((symbol & (1 << i)) ? 1 : 0);
+        m_context.top().uart_rxd = ((symbol & (1 << i)) ? 1 : 0);
         co_await m_context.clocks(m_clockDivider);
     }
 

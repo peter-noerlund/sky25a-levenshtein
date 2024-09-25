@@ -37,15 +37,19 @@ public:
         for (const auto& word : container)
         {
             co_await m_bus.write(address, std::as_bytes(std::span(word)));
+            address += word.size();
+
             co_await m_bus.write(address, std::as_bytes(std::span(wordTerminator)));
+            address++;
         }
+        
         co_await m_bus.write(address, std::as_bytes(std::span(listTerminator)));
     }
 
     asio::awaitable<Result> search(std::string_view word);
 
 private:
-        enum ControlFlags : std::uint8_t
+    enum ControlFlags : std::uint8_t
     {
         EnableFlag = 0x01
     };
@@ -67,6 +71,11 @@ private:
         WordTerminator = 0xFE,
         ListTerminator = 0xFF
     };
+
+    asio::awaitable<void> writeByte(std::uint32_t address, std::uint8_t value);
+    asio::awaitable<void> writeShort(std::uint32_t address, std::uint16_t value);
+    asio::awaitable<std::uint8_t> readByte(std::uint32_t address);
+    asio::awaitable<std::uint16_t> readShort(std::uint32_t address);
 
     Context& m_context;
     Bus& m_bus;

@@ -79,6 +79,12 @@ asio::awaitable<void> Runner::run(asio::io_context& ioContext, Context& context,
         {
             co_await loadDictionary(client, *dictionaryPath);
         }
+        if (!searchWord.empty())
+        {
+            auto result = co_await client.search(searchWord);
+
+            fmt::println("Search result for \"{}\": index={} distance={}", searchWord, result.index, result.distance);
+        }
 
         ioContext.stop();
     }
