@@ -65,7 +65,7 @@ module qspi_sram
 `endif // VERILATOR
     end
 
-    always @ (posedge sck, posedge ss_n, negedge ss_n) begin
+    always @ (posedge sck, negedge sck, posedge ss_n, negedge ss_n) begin
         if (ss_n) begin
             state <= STATE_COMMAND;
             counter <= 5'd0;
@@ -74,124 +74,140 @@ module qspi_sram
 `else // VERILATOR
             sio_out <= 4'bzzzz;
 `endif // VERILATOR
-        end else if (sck && !ss_n) begin
+        end else if (!ss_n) begin
             case (state)
                 STATE_COMMAND: begin
-                    command <= next_command;
-                    if (counter == 5'd7) begin
-                        if (next_command == CMD_READ_1S_1S_1S || next_command == CMD_WRITE_1S_1S_1S) begin
-                            state <= STATE_ADDRESS;
-                        end else if (next_command == CMD_READ_1S_4S_4S || next_command == CMD_WRITE_1S_4S_4S) begin
-                            state <= STATE_ADDRESS_QUAD;
+                    if (sck) begin
+                        command <= next_command;
+                        if (counter == 5'd7) begin
+                            if (next_command == CMD_READ_1S_1S_1S || next_command == CMD_WRITE_1S_1S_1S) begin
+                                state <= STATE_ADDRESS;
+                            end else if (next_command == CMD_READ_1S_4S_4S || next_command == CMD_WRITE_1S_4S_4S) begin
+                                state <= STATE_ADDRESS_QUAD;
+                            end else begin
+                                state <= STATE_FAIL;
+                            end
+                            counter <= 5'd0;
                         end else begin
-                            state <= STATE_FAIL;
+                            counter <= counter + 5'd1;
                         end
-                        counter <= 5'd0;
-                    end else begin
-                        counter <= counter + 5'd1;
                     end
                 end
 
                 STATE_ADDRESS: begin
-                    address <= next_address;
-                    if (counter == 5'd23) begin
-                        if (command == CMD_READ_1S_1S_1S) begin
-                            state <= STATE_READ;
-                            read_buffer <= memory[next_address];
+                    if (sck) begin
+                        address <= next_address;
+                        if (counter == 5'd23) begin
+                            if (command == CMD_READ_1S_1S_1S) begin
+                                state <= STATE_READ;
+                                read_buffer <= memory[next_address];
+                            end else begin
+                                state <= STATE_WRITE;
+                            end
+                            counter <= 5'd0;
                         end else begin
-                            state <= STATE_WRITE;
+                            counter <= counter + 5'd1;
                         end
-                        counter <= 5'd0;
-                    end else begin
-                        counter <= counter + 5'd1;
                     end
                 end
 
                 STATE_ADDRESS_QUAD: begin
-                    address <= next_address_quad;
-                    if (counter == 5'd5) begin
-                        if (command == CMD_READ_1S_4S_4S) begin
-                            state <= STATE_WAIT;
-                            read_buffer <= memory[next_address_quad];
+                    if (sck) begin
+                        address <= next_address_quad;
+                        if (counter == 5'd5) begin
+                            if (command == CMD_READ_1S_4S_4S) begin
+                                state <= STATE_WAIT;
+                                read_buffer <= memory[next_address_quad];
+                            end else begin
+                                state <= STATE_WRITE_QUAD;
+                            end
+                            counter <= 5'd0;
                         end else begin
-                            state <= STATE_WRITE_QUAD;
+                            counter <= counter + 5'd1;
                         end
-                        counter <= 5'd0;
-                    end else begin
-                        counter <= counter + 5'd1;
                     end
                 end
 
                 STATE_WAIT: begin
-                    if (counter == 5'(WAIT_CYCLES - 1)) begin
-                        state <= STATE_READ_QUAD;
-                        counter <= 5'd0;
-                    end else begin
-                        counter <= counter + 5'd1;
+                    if (sck) begin
+                        if (counter == 5'(WAIT_CYCLES - 1)) begin
+                            state <= STATE_READ_QUAD;
+                            counter <= 5'd0;
+                        end else begin
+                            counter <= counter + 5'd1;
+                        end
                     end
                 end
 
                 STATE_READ: begin
+                    if (!sck) begin
 `ifdef VERILATOR
-                    sio_out <= {2'b00, read_buffer[7], 1'b0};
+                        sio_out <= {2'b00, read_buffer[7], 1'b0};
 `else // VERILATOR
-                    sio_out <= {2'bzz, read_buffer[7], 1'bz};
+                        sio_out <= {2'bzz, read_buffer[7], 1'bz};
 `endif // VERILATOR
-                    read_buffer <= next_read_buffer;
-                    if (counter == 5'd0) begin
-                        address <= address + 24'd1;
-                    end
-                    if (counter == 5'd7) begin
-                        if (VERBOSE) begin
-                            $display("R [%06X] => %02X", address - 1, memory[address - 1]);
+                        read_buffer <= next_read_buffer;
+                        if (counter == 5'd0) begin
+                            address <= address + 24'd1;
                         end
-                        read_buffer <= memory[address];
-                        counter <= 5'd0;
-                    end else begin
-                        counter <= counter + 5'd1;
+                        if (counter == 5'd7) begin
+                            if (VERBOSE) begin
+                                $display("R [%06X] => %02X", address - 1, memory[address - 1]);
+                            end
+                            read_buffer <= memory[address];
+                            counter <= 5'd0;
+                        end else begin
+                            counter <= counter + 5'd1;
+                        end
                     end
                 end
 
                 STATE_READ_QUAD: begin
-                    sio_out <= read_buffer[7:4];
-                    read_buffer <= next_read_buffer_quad;
-                    if (counter == 5'd0) begin
-                        counter <= 5'd1;
-                    end else begin
-                        if (VERBOSE) begin
-                            $display("R [%06X] => %02X", address - 1, memory[address - 1]);
+                    if (!sck) begin
+                        sio_out <= read_buffer[7:4];
+                        read_buffer <= next_read_buffer_quad;
+                        if (counter == 5'd0) begin
+                            counter <= 5'd1;
+                        end else begin
+                            if (VERBOSE) begin
+                                $display("R [%06X] => %02X", address - 1, memory[address - 1]);
+                            end
+                            read_buffer <= memory[address];
+                            address <= address + 24'd1;
+                            counter <= 5'd0;
                         end
-                        read_buffer <= memory[address];
-                        address <= address + 24'd1;
-                        counter <= 5'd0;
                     end
                 end
 
                 STATE_WRITE: begin
-                    write_buffer <= next_write_buffer;
-                    if (counter == 5'd7) begin
-                        if (VERBOSE) begin
-                            $display("W [%06X] <= %02X", address, next_write_buffer);
+                    if (sck) begin
+                        write_buffer <= next_write_buffer;
+                        if (counter == 5'd7) begin
+                            if (VERBOSE) begin
+                                $display("W [%06X] <= %02X", address, next_write_buffer);
+                            end
+                            memory[address] <= next_write_buffer;
+                            address <= address + 24'd1;
+                            counter <= 5'd0;
+                        end else begin
+                            counter <= counter + 5'd1;
                         end
-                        memory[address] <= next_write_buffer;
-                        address <= address + 24'd1;
-                        counter <= 5'd0;
-                    end else begin
-                        counter <= counter + 5'd1;
                     end
                 end
 
                 STATE_WRITE_QUAD: begin
-                    write_buffer <= next_write_buffer_quad;
-                    if (counter == 5'd1) begin
-                        if (VERBOSE) begin
-                            $display("W [%06X] <= %02X", address, next_write_buffer_quad);
+                    if (sck) begin
+                        write_buffer <= next_write_buffer_quad;
+                        if (counter == 5'd1) begin
+                            if (VERBOSE) begin
+                                $display("W [%06X] <= %02X", address, next_write_buffer_quad);
+                            end
+                            memory[address] <= next_write_buffer_quad;
+                            address <= address + 24'd1;
+                            counter <= 5'd0;
+                        end else begin
+                            counter <= 5'd1;
                         end
-                        memory[address] <= next_write_buffer_quad;
-                        address <= address + 24'd1;
-                        counter <= 5'd0;
-                    end else begin
-                        counter <= 5'd1;
                     end
                 end
 
