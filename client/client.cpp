@@ -65,8 +65,6 @@ asio::awaitable<Client::Result> Client::search(std::string_view word)
 
     // Set up the rest
 
-    co_await writeByte(LengthAddress, word.size());
-
     std::uint16_t mask = 1 << (word.size() - 1);
     co_await writeShort(MaskAddress, mask);
 
@@ -75,7 +73,7 @@ asio::awaitable<Client::Result> Client::search(std::string_view word)
 
     // Initiate search
 
-    co_await writeByte(ControlAddress, EnableFlag);
+    co_await writeByte(ControlAddress, (word.size() << 1) | EnableFlag);
 
     while (true)
     {

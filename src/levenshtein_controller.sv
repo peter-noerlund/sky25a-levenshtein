@@ -40,15 +40,14 @@ module levenshtein_controller
     localparam DISTANCE_WIDTH = 8;
     localparam ID_WIDTH = 16;
 
-    localparam ADDR_CTRL = 4'd0;
-    localparam ADDR_LENGTH = 4'd1;
-    localparam ADDR_MASK_HI = 4'd2;
-    localparam ADDR_MASK_LO = 4'd3;
-    localparam ADDR_INITIAL_VP_HI = 4'd4;
-    localparam ADDR_INITIAL_VP_LO = 4'd5;
-    localparam ADDR_DISTANCE = 4'd6;
-    localparam ADDR_IDX_HI = 4'd8;
-    localparam ADDR_IDX_LO = 4'd9;
+    localparam ADDR_CTRL = 3'd0;
+    localparam ADDR_DISTANCE = 3'd1;
+    localparam ADDR_MASK_HI = 3'd2;
+    localparam ADDR_MASK_LO = 3'd3;
+    localparam ADDR_INITIAL_VP_HI = 3'd4;
+    localparam ADDR_INITIAL_VP_LO = 3'd5;
+    localparam ADDR_IDX_HI = 3'd6;
+    localparam ADDR_IDX_LO = 3'd7;
 
     reg enabled;
     reg [4:0] word_length;
@@ -92,17 +91,15 @@ module levenshtein_controller
     assign hn = d0 & vp;
 
     always_comb begin
-        case (wbs_adr_i[3:0])
-            ADDR_CTRL: wbs_dat_o = {7'b000000, enabled};
-            ADDR_LENGTH: wbs_dat_o = {3'b000, word_length};
+        case (wbs_adr_i[2:0])
+            ADDR_CTRL: wbs_dat_o = {2'b00, word_length, enabled};
+            ADDR_DISTANCE: wbs_dat_o = best_distance;
             ADDR_MASK_HI: wbs_dat_o = mask[15:8];
             ADDR_MASK_LO: wbs_dat_o = mask[7:0];
             ADDR_INITIAL_VP_HI: wbs_dat_o = initial_vp[15:8];
             ADDR_INITIAL_VP_LO: wbs_dat_o = initial_vp[7:0];
-            ADDR_DISTANCE: wbs_dat_o = best_distance;
             ADDR_IDX_HI: wbs_dat_o = best_idx[15:8];
             ADDR_IDX_LO: wbs_dat_o = best_idx[7:0];
-            default: wbs_dat_o = 8'h00;
         endcase
     end
 
@@ -129,11 +126,12 @@ module levenshtein_controller
         end else begin
             if (wbs_cyc_i && wbs_stb_i && !wbs_ack_o) begin
                 if (wbs_we_i) begin
-                    if (wbs_adr_i[2:0] == 3'(ADDR_CTRL)) begin
+                    if (wbs_adr_i[2:0] == ADDR_CTRL) begin
                         enabled <= wbs_dat_i[0];
+                        word_length <= wbs_dat_i[5:1];
 
                         dict_address <= DICT_ADDR_WIDTH'(0);
-                        d <= DISTANCE_WIDTH'(word_length);
+                        d <= DISTANCE_WIDTH'(wbs_dat_i[5:1]);
                         vn <= BITVECTOR_WIDTH'(0);
                         vp <= initial_vp;
                         state <= STATE_READ_DICT;
@@ -141,15 +139,13 @@ module levenshtein_controller
                         idx <= ID_WIDTH'(0);
                         best_idx <= ID_WIDTH'(0);
                         best_distance <= DISTANCE_WIDTH'(-1);
-                    end else if (wbs_adr_i[2:0] == 3'(ADDR_LENGTH)) begin
-                        word_length <= wbs_dat_i[4:0];
-                    end else if (wbs_adr_i[2:0] == 3'(ADDR_MASK_HI)) begin
+                    end else if (wbs_adr_i[2:0] == ADDR_MASK_HI) begin
                         mask[15:8] <= wbs_dat_i;
-                    end else if (wbs_adr_i[2:0] == 3'(ADDR_MASK_LO)) begin
+                    end else if (wbs_adr_i[2:0] == ADDR_MASK_LO) begin
                         mask[7:0] <= wbs_dat_i;
-                    end else if (wbs_adr_i[2:0] == 3'(ADDR_INITIAL_VP_HI)) begin
+                    end else if (wbs_adr_i[2:0] == ADDR_INITIAL_VP_HI) begin
                         initial_vp[15:8] <= wbs_dat_i;
-                    end else if (wbs_adr_i[2:0] == 3'(ADDR_INITIAL_VP_LO)) begin
+                    end else if (wbs_adr_i[2:0] == ADDR_INITIAL_VP_LO) begin
                         initial_vp[7:0] <= wbs_dat_i;
                     end
                 end

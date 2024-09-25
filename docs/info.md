@@ -44,16 +44,15 @@ The lower half of the memory space is used for registers and the upper half of t
 
 The address space is basically as follows:
 
-| Address  | Size | Access | Identifier  | Type | Description          |
-|----------|------|--------|-------------|------|----------------------|
-| 0x000000 | 1    | R/W    | `CTRL`      | Reg  | Control register     |
-| 0x000001 | 1    | R/W    | `LENGTH`    | Reg  | Word length          |
-| 0x000002 | 2    | R/W    | `MASK`      | Reg  | Mask                 |
-| 0x000004 | 2    | R/W    | `VP`        | Reg  | Initial VP value     |
-| 0x000006 | 1    | R/O    | `DISTANCE`  | Reg  | Levenshtein distance |
-| 0x000008 | 2    | R/O    | `INDEX`     | Reg  | Word index           |
-| 0x400000 | 512  | R/W    | `VECTORMAP` | SPI  | Vector map           |
-| 0x600000 | 2M   | R/W    | `DICT`      | SPI  | Dictionary           |
+| Address  | Size | Access | Identifier  | Type | Description                                         |
+|----------|------|--------|-------------|------|-----------------------------------------------------|
+| 0x000000 | 1    | R/W    | `CTRL`      | Reg  | Control register. Bit 0=Enable. Bit 5-1=Word length |
+| 0x000001 | 1    | R/O    | `DISTANCE`  | Reg  | Levenshtein distance                                |
+| 0x000002 | 2    | R/W    | `MASK`      | Reg  | Mask                                                |
+| 0x000004 | 2    | R/W    | `VP`        | Reg  | Initial VP value                                    |
+| 0x000006 | 2    | R/O    | `INDEX`     | Reg  | Word index                                          |
+| 0x400000 | 512  | R/W    | `VECTORMAP` | SPI  | Vector map                                          |
+| 0x600000 | 2M   | R/W    | `DICT`      | SPI  | Dictionary                                          |                               
 
 #### Operation
 

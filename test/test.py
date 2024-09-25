@@ -73,11 +73,10 @@ class Wishbone(object):
 
 class Accelerator(object):
     CTRL_ADDR = 0
-    LENGTH_ADDR = 1
+    DISTANCE_ADDR = 1
     MASK_ADDR = 2
     VP_ADDR = 4
-    DISTANCE_ADDR = 6
-    INDEX_ADDR = 8
+    INDEX_ADDR = 6
     VECTORMAP_BASE_ADDR = 0x400000
     DICTIONARY_BASE_ADDR = 0x600000
 
@@ -116,8 +115,6 @@ class Accelerator(object):
             await self._bus.write(self.VECTORMAP_BASE_ADDR + ord(c) * 2, (vector >> 8) & 0xFF)
             await self._bus.write(self.VECTORMAP_BASE_ADDR + ord(c) * 2 + 1, vector & 0xFF)
 
-        await self._bus.write(self.LENGTH_ADDR, len(search_word))
-
         mask = 1 << (len(search_word) - 1)
         await self._bus.write(self.MASK_ADDR, (mask >> 8) & 0xFF)
         await self._bus.write(self.MASK_ADDR + 1, mask & 0xFF)
@@ -127,13 +124,12 @@ class Accelerator(object):
         await self._bus.write(self.VP_ADDR + 1, vp & 0xFF)
 
         # Verify
-        assert await self._bus.read(self.LENGTH_ADDR) == len(search_word)
         assert await self._bus.read(self.MASK_ADDR) == (mask >> 8) & 0xFF
         assert await self._bus.read(self.MASK_ADDR + 1) == mask & 0xFF
         assert await self._bus.read(self.VP_ADDR) == (vp >> 8) & 0xFF
         assert await self._bus.read(self.VP_ADDR + 1) == vp & 0xFF
 
-        await self._bus.write(self.CTRL_ADDR, self.ENABLE_FLAG)
+        await self._bus.write(self.CTRL_ADDR, (len(search_word) << 1) | self.ENABLE_FLAG)
 
         assert (await self._bus.read(self.CTRL_ADDR) & self.ENABLE_FLAG) == self.ENABLE_FLAG
 

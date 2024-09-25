@@ -57,11 +57,10 @@ private:
     enum Address : std::uint32_t
     {
         ControlAddress = 0x0000000,
-        LengthAddress = 0x000001,
+        DistanceAddress = 0x0000001,
         MaskAddress = 0x000002,
         VpAddress = 0x000004,
-        DistanceAddress = 0x0000006,
-        IndexAddress = 0x0000008,
+        IndexAddress = 0x0000006,
         BaseBitvectorAddress = 0x400000,
         BaseDictionaryAddress = 0x600000
     };
