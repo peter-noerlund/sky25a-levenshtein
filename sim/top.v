@@ -10,13 +10,6 @@ module top
         output wire uart_txd
     );
 
-    /*
-    initial begin
-        $dumpfile("sim.vcd");
-        $dumpvars(0, top);
-    end
-    */
-
     /* verilator lint_off UNUSEDSIGNAL */
     wire [7:0] ui_in;
     wire [7:0] uo_out;
