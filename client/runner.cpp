@@ -2,10 +2,12 @@
 
 #include "client.h"
 #include "context.h"
+#include "levenshtein.h"
 #include "uart.h"
 #include "uart_bus.h"
 #include "real_context.h"
 #include "real_uart.h"
+#include "test_set.h"
 #include "verilator_context.h"
 #include "verilator_uart.h"
 
@@ -35,7 +37,7 @@ void Runner::setVcdPath(const std::filesystem::path& vcdPath)
     m_vcdPath = vcdPath;
 }
     
-void Runner::run(const std::optional<std::filesystem::path>& dictionaryPath, std::string_view searchWord, bool noInit)
+void Runner::run(const std::optional<std::filesystem::path>& dictionaryPath, std::string_view searchWord, bool noInit, bool runRandomizedTest)
 {
     asio::io_context ioContext;
     
@@ -64,12 +66,12 @@ void Runner::run(const std::optional<std::filesystem::path>& dictionaryPath, std
     UartBus bus(*uart);
     Client client(*context, bus);
 
-    asio::co_spawn(ioContext, run(ioContext, *context, client, dictionaryPath, searchWord, noInit), asio::detached);
+    asio::co_spawn(ioContext, run(ioContext, *context, client, dictionaryPath, searchWord, noInit, runRandomizedTest), asio::detached);
 
     ioContext.run();
 }
 
-asio::awaitable<void> Runner::run(asio::io_context& ioContext, Context& context, Client& client, const std::optional<std::filesystem::path>& dictionaryPath, std::string_view searchWord, bool noInit)
+asio::awaitable<void> Runner::run(asio::io_context& ioContext, Context& context, Client& client, const std::optional<std::filesystem::path>& dictionaryPath, std::string_view searchWord, bool noInit, bool runRandomizedTest)
 {
     try
     {
@@ -95,11 +97,56 @@ asio::awaitable<void> Runner::run(asio::io_context& ioContext, Context& context,
             fmt::println("Search result for \"{}\": index={} distance={}", searchWord, result.index, result.distance);
         }
 
+        if (runRandomizedTest)
+        {
+            fmt::println("Running randomized test");
+            co_await runTest(client);
+        }
+
         ioContext.stop();
     }
     catch (const std::exception& exception)
     {
         fmt::println(stderr, "Caught exception: {}", exception.what());
+    }
+}
+
+asio::awaitable<void> Runner::runTest(Client& client)
+{
+    TestSet::Config testConfig;
+    testConfig.minChar = 'a';
+    testConfig.maxChar = 'f';
+    testConfig.minDictionaryWordLength = 1;
+    testConfig.maxDictionaryWordLength = 32;
+    testConfig.dictionaryWordCount = 1024;
+    testConfig.minSearchWordLength = 1;
+    testConfig.maxSearchWordLength = 16;
+    testConfig.searchWordCount = 256;
+
+    TestSet testSet(testConfig);
+
+    fmt::println("Loading random dictionary");
+    auto dictionaryWords = testSet.dictionaryWords();
+    co_await client.loadDictionary(dictionaryWords);
+
+    fmt::println("Searching for words");
+
+    for (const auto& searchWord : testSet.searchWords())
+    {
+        auto result = co_await client.search(searchWord);
+        if (result.index >= dictionaryWords.size())
+        {
+            throw std::runtime_error(fmt::format("Result index out of range ({} >= {}). Search word was {}", result.index, dictionaryWords.size(), searchWord).c_str());
+        }
+
+        auto word = dictionaryWords[result.index];
+        auto distance = levenshtein(searchWord, word);
+        if (result.distance != distance)
+        {
+            throw std::runtime_error(fmt::format("Invalid distance. Got {}, expected {}. Search word was {}, result index was {} ({})", result.distance, distance, searchWord, result.index, word).c_str());
+        }
+
+        fmt::println("  {}: {} (distance {})", searchWord, word, result.distance);
     }
 }
 

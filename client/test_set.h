@@ -5,6 +5,9 @@
 #include <string>
 #include <vector>
 
+namespace tt09_levenshtein
+{
+
 class TestSet
 {
 public:
@@ -44,3 +47,5 @@ private:
     std::vector<std::string> m_dictionaryWords;
     std::vector<std::string> m_searchWords;
 };
+
+} // namespace tt09_levenshtein

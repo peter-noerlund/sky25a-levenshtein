@@ -3,6 +3,9 @@
 #include <algorithm>
 #include <vector>
 
+namespace tt09_levenshtein
+{
+
 unsigned int levenshtein(std::string_view s, std::string_view t) noexcept
 {
 	auto m = s.size();
@@ -26,3 +29,5 @@ unsigned int levenshtein(std::string_view s, std::string_view t) noexcept
 
 	return d[n][m];
 }
+
+} // namespace tt09_levenshtein

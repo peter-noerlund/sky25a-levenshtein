@@ -7,6 +7,9 @@
 #include <stdexcept>
 #include <utility>
 
+namespace tt09_levenshtein
+{
+
 TestSet::TestSet(const Config& config)
 {
     std::set<std::string> words;
@@ -80,3 +83,6 @@ std::vector<std::string> TestSet::generateWords(
 
     return wordList;
 }
+
+} // namespace tt09_levenshtein
+

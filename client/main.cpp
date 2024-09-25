@@ -13,6 +13,7 @@ int main(int argc, char** argv)
 {
     bool showHelp = false;
     bool noInit = false;
+    bool runRandomizedTest = false;
     std::optional<std::filesystem::path> devicePath;
     std::optional<std::filesystem::path> vcdPath;
     std::optional<std::filesystem::path> dictionaryPath;
@@ -24,6 +25,7 @@ int main(int argc, char** argv)
         | lyra::opt(noInit)["--no-init"]("Skip initialization")
         | lyra::opt(dictionaryPath, "FILE")["-l"]["--load-dictionary"]("Load dictionary")
         | lyra::opt(searchWord, "WORD")["-s"]["--search"]("Search for word")
+        | lyra::opt(runRandomizedTest)["-t"]["--test"]("Run randomized test")
         | lyra::help(showHelp);
 
     auto result = cli.parse({argc, argv});
@@ -50,7 +52,7 @@ int main(int argc, char** argv)
 
     try
     {
-        runner.run(dictionaryPath, searchWord, noInit);
+        runner.run(dictionaryPath, searchWord, noInit, runRandomizedTest);
         return EXIT_SUCCESS;
     }
     catch (const std::exception& exception)

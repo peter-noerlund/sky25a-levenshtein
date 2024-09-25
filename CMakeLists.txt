@@ -75,10 +75,12 @@ target_link_libraries(uart_wb PRIVATE fmt::fmt-header-only)
 
 add_executable(client
     client/client.cpp
+    client/levenshtein.cpp
     client/main.cpp
     client/real_context.cpp
     client/real_uart.cpp
     client/runner.cpp
+    client/test_set.cpp
     client/uart_bus.cpp
     client/verilator_context.cpp
     client/verilator_uart.cpp
@@ -95,7 +97,7 @@ verilate(client
     OPT_FAST "-O3 -march=native -flto"
     VERILATOR_ARGS -Wall -I${CMAKE_CURRENT_SOURCE_DIR}/src
     SOURCES
-    sim/top.v
+    client/top.v
     test/qspi_sram.sv
     ${VERILOG_SOURCES}
 )
