@@ -13,7 +13,7 @@ namespace tt09_levenshtein
 class RealUart : public Uart
 {
 public:
-    RealUart(asio::any_io_executor& executor, const std::filesystem::path& path);
+    RealUart(asio::any_io_executor executor, const std::filesystem::path& path);
 
     asio::awaitable<void> send(std::span<const std::byte> data) override;
     asio::awaitable<void> recv(std::span<std::byte> buffer) override;

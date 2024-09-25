@@ -8,7 +8,7 @@
 namespace tt09_levenshtein
 {
 
-RealUart::RealUart(asio::any_io_executor& executor, const std::filesystem::path& path)
+RealUart::RealUart(asio::any_io_executor executor, const std::filesystem::path& path)
     : m_serialPort(executor, path.string().c_str())
 {
     m_serialPort.set_option(asio::serial_port::baud_rate(3000000));

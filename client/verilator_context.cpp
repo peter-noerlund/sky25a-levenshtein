@@ -5,6 +5,7 @@
 #include <asio/post.hpp>
 #include <asio/use_awaitable.hpp>
 #include <verilated.h>
+#include <verilated_vcd_c.h>
 
 namespace tt09_levenshtein
 {
@@ -16,8 +17,13 @@ VerilatorContext::VerilatorContext(unsigned long int frequency)
 
 VerilatorContext::VerilatorContext(unsigned long int frequency, const std::filesystem::path& vcdFileName)
     : m_halfPeriod(2000000000UL / frequency)
-    , m_vcdFileName(vcdFileName)
 {
+    Verilated::traceEverOn(true);
+
+    m_vcd = std::make_unique<VerilatedVcdC>();
+    m_top.trace(m_vcd.get(), 99);
+
+    m_vcd->open(vcdFileName.string().c_str());
 }
 
 asio::awaitable<void> VerilatorContext::clock()
@@ -65,9 +71,15 @@ asio::awaitable<void> VerilatorContext::runClock()
     while (true)
     {
         context.timeInc(m_halfPeriod.count());
+        m_time += m_halfPeriod;
 
         m_top.clk ^= 1;
         m_top.eval();
+
+        if (m_vcd)
+        {
+            m_vcd->dump(context.time());
+        }
 
         co_await asio::post(executor, asio::use_awaitable);
     }

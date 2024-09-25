@@ -7,8 +7,10 @@
 #include <asio/post.hpp>
 #include <asio/this_coro.hpp>
 #include <asio/use_awaitable.hpp>
+#include <verilated_vcd_c.h>
 
 #include <chrono>
+#include <memory>
 #include <filesystem>
 #include <optional>
 
@@ -78,8 +80,8 @@ private:
     asio::awaitable<void> runClock();
     
     std::chrono::nanoseconds m_halfPeriod;
-    std::optional<std::filesystem::path> m_vcdFileName;
     std::chrono::nanoseconds m_time = {};
+    std::unique_ptr<VerilatedVcdC> m_vcd;
     Vtop m_top;
 };
 
