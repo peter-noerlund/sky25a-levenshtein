@@ -12,6 +12,7 @@
 int main(int argc, char** argv)
 {
     bool showHelp = false;
+    bool noInit = false;
     std::optional<std::filesystem::path> devicePath;
     std::optional<std::filesystem::path> vcdPath;
     std::optional<std::filesystem::path> dictionaryPath;
@@ -20,6 +21,7 @@ int main(int argc, char** argv)
     auto cli = lyra::cli()
         | lyra::opt(devicePath, "DEVICE")["-d"]["--device"]("Use device instead of verilog")
         | lyra::opt(vcdPath, "FILE")["-v"]["--vcd-file"]("Create VCD file")
+        | lyra::opt(noInit)["--no-init"]("Skip initialization")
         | lyra::opt(dictionaryPath, "FILE")["-l"]["--load-dictionary"]("Load dictionary")
         | lyra::opt(searchWord, "WORD")["-s"]["--search"]("Search for word")
         | lyra::help(showHelp);
@@ -48,7 +50,7 @@ int main(int argc, char** argv)
 
     try
     {
-        runner.run(dictionaryPath, searchWord);
+        runner.run(dictionaryPath, searchWord, noInit);
         return EXIT_SUCCESS;
     }
     catch (const std::exception& exception)

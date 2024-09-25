@@ -20,10 +20,10 @@ public:
     void setDevicePath(const std::filesystem::path& devicePath);
     void setVcdPath(const std::filesystem::path& vcdPath);
     
-    void run(const std::optional<std::filesystem::path>& dictionaryPath, std::string_view searchWord);
+    void run(const std::optional<std::filesystem::path>& dictionaryPath, std::string_view searchWord, bool noInit);
 
 private:
-    asio::awaitable<void> run(asio::io_context& ioContext, Context& context, Client& client, const std::optional<std::filesystem::path>& dictionaryPath, std::string_view searchWord);
+    asio::awaitable<void> run(asio::io_context& ioContext, Context& context, Client& client, const std::optional<std::filesystem::path>& dictionaryPath, std::string_view searchWord, bool noInit);
     asio::awaitable<void> loadDictionary(Client& client, const std::filesystem::path& path);
 
     std::optional<std::filesystem::path> m_devicePath;

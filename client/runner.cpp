@@ -35,7 +35,7 @@ void Runner::setVcdPath(const std::filesystem::path& vcdPath)
     m_vcdPath = vcdPath;
 }
     
-void Runner::run(const std::optional<std::filesystem::path>& dictionaryPath, std::string_view searchWord)
+void Runner::run(const std::optional<std::filesystem::path>& dictionaryPath, std::string_view searchWord, bool noInit)
 {
     asio::io_context ioContext;
     
@@ -64,23 +64,32 @@ void Runner::run(const std::optional<std::filesystem::path>& dictionaryPath, std
     UartBus bus(*uart);
     Client client(*context, bus);
 
-    asio::co_spawn(ioContext, run(ioContext, *context, client, dictionaryPath, searchWord), asio::detached);
+    asio::co_spawn(ioContext, run(ioContext, *context, client, dictionaryPath, searchWord, noInit), asio::detached);
 
     ioContext.run();
 }
 
-asio::awaitable<void> Runner::run(asio::io_context& ioContext, Context& context, Client& client, const std::optional<std::filesystem::path>& dictionaryPath, std::string_view searchWord)
+asio::awaitable<void> Runner::run(asio::io_context& ioContext, Context& context, Client& client, const std::optional<std::filesystem::path>& dictionaryPath, std::string_view searchWord, bool noInit)
 {
     try
     {
         co_await context.init();
-        co_await client.init();
+        if (!noInit)
+        {
+            fmt::println("Initializing");
+            co_await client.init();
+        }
+
         if (dictionaryPath)
         {
+            fmt::println("Loading dictionary");
             co_await loadDictionary(client, *dictionaryPath);
         }
+
         if (!searchWord.empty())
         {
+            fmt::println("Searching for \"{}\"", searchWord);
+
             auto result = co_await client.search(searchWord);
 
             fmt::println("Search result for \"{}\": index={} distance={}", searchWord, result.index, result.distance);
