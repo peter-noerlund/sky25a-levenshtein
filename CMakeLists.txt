@@ -78,6 +78,7 @@ add_executable(client
     client/main.cpp
     client/real_context.cpp
     client/real_uart.cpp
+    client/runner.cpp
     client/uart_bus.cpp
     client/verilator_context.cpp
     client/verilator_uart.cpp
