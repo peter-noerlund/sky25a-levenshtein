@@ -13,7 +13,7 @@ tt09-levenshtein is a fuzzy search engine which can find the best matching word 
 
 Fundamentally its an implementation of the bit-vector levenshtein algorithm from Heikki Hyyrö's 2022 paper with the title *A Bit-Vector Algorithm for Computing Levenshtein and Damerau Edit Distances*.
 
-#### UART
+### UART
 
 The device is organized as a wishbone bus which is accessed through commands on the UART.
 
@@ -36,7 +36,7 @@ Each command consists of 4 input bytes and 1 output byte:
 | 0    | 7-0 | Byte read if READ, otherwise just `0x00` |
 
 
-#### Memory Layout
+### Memory Layout
 
 As indicated by the UART protocol, the address space is 23 bits.
 
@@ -44,59 +44,89 @@ The lower half of the memory space is used for registers and the upper half of t
 
 The address space is basically as follows:
 
-| Address  | Size | Access | Identifier  | Type | Description                                          |
-|----------|------|--------|-------------|------|------------------------------------------------------|
-| 0x000000 | 1    | R/W    | `CTRL`      | Reg  | Control register. Bit 0-4=Word length. Bit 7=Running |
-| 0x000001 | 1    | R/O    | `DISTANCE`  | Reg  | Levenshtein distance                                 |
-| 0x000002 | 2    | R/O    | `INDEX`     | Reg  | Word index                                           |
-| 0x400000 | 512  | R/W    | `VECTORMAP` | SPI  | Vector map                                           |
-| 0x600000 | 2M   | R/W    | `DICT`      | SPI  | Dictionary                                           |
+| Address  | Size | Access | Identifier  |
+|----------|------|--------|-------------|
+| 0x000000 | 1    | R/W    | `CTRL`      |
+| 0x000001 | 1    | R/O    | `DISTANCE`  |
+| 0x000002 | 2    | R/O    | `INDEX`     |
+| 0x400000 | 512  | R/W    | `VECTORMAP` |
+| 0x600000 | 2M   | R/W    | `DICT`      |
 
-#### Operation
+**CTRL**
 
-##### Initialization
+The control register is used to start the engine and see when it has completed.
 
-Before doing anything, the vector map (`VECTORMAP`) needs to be filled with `0x00`. This is to reduce the work necessary when starting a search and is only necessary once after power up.
+The layout is as follows:
 
-##### Store dictionary
+| Bits | Size | Access | Description                                                 |
+|------|------|--------|-------------------------------------------------------------|
+| 0-4  | 4    | R/W    | Word length                                                 |
+| 5-6  | 2    | R/O    | Not used                                                    |
+| 7    | 1    | R/O    | Is set to `1` while the engine runs and `0` when it is done |
 
-Next, you need to store a dictionary in the dictionary memory (`DICT`). The dictionary is stored as a sequence of words, encoded using 1 bit per character. Each word is terminated with the byte value `0xFE` and the dictionary itself is terminated by the byte value `0xFF`. In total there can be no more than 65535 words and the whole list must not exceed 2MB.
+When data is written to this address, the engine automatically starts.
 
-##### Perform fuzzy matching
+**DISTANCE**
 
-To perform a fuzzy search, you first need to populate the vector map (`VECTORMAP`) based on the input word.
+When the engine has finished executing, this address contains the levenshtein distance of the best match.
 
-For each character in the word, you produce a bit vector representing which position in the word holds the character.
+**INDEX**
 
-Example:
+When the engine has finished executing, this address contains the index of the best word from the dictionary.
 
-```verilog
-word = application
+**VECTORMAP**
 
-a = 16'b00000000_01000001;  // a_____a____
-p = 16'b00000000_00000110;  // _pp________
-l = 16'b00000000_00001000;  // ___l_______
-i = 16'b00000001_00010000;  // ____i___i__
-c = 16'b00000000_00100000;  // _____c_____
-t = 16'b00000000_10000000;  // _______t___
-o = 16'b00000010_00000000;  // _________o_
-n = 16'b00000100_00000000;  // __________n
-```
+The vector map must contain the corresponding bitvector for each input byte in the alphabet.
 
-You then store each bitvector at address `VECTORMAP + char * 2`. The bitvectors is stored in bit endian byte order.
+If the search word is `application`, the bit vectors will look as follows:
 
-Finally, you store the length in the `CTRL`register which will then initiate the accelerator
+| Letter | Index  | Bit vector                              |
+|--------|--------|-----------------------------------------|
+| `a`    | `0x61` | `16'b00000000_01000001` (`a_____a____`) |
+| `p`    | `0x70` | `16'b00000000_00000110` (`_pp________`) |
+| `l`    | `0x6C` | `16'b00000000_00001000` (`___l_______`) |
+| `i`    | `0x69` | `16'b00000001_00010000` (`____i___i__`) |
+| `c`    | `0x63` | `16'b00000000_00100000` (`_____c_____`) |
+| `t`    | `0x74` | `16'b00000000_10000000` (`_______t___`) |
+| `o`    | `0x6F` | `16'b00000010_00000000` (`_________o_`) |
+| `n`    | `0x6E` | `16'b00000100_00000000` (`__________n`) |
+| *      | *      | `16'b00000000_00000000` (`___________`) |
 
-To know when the algorithm is done, you poll the control register (`CTRL`) at a regular interval until the most significant bit is 0.
+Since each vector is 16-bit, the corresponding address is `0x400000 + index * 2`
 
-You can then read out the levenshtein distance at address `DISTANCE` and the index of the word in the dictionary which was the best match at `INDEX` (big endian).
+**DICT**
 
-Finally, you need to clear the vector map (`VECTORMAP`) before the next search. Instead of filling the entire 512 bytes with `0x00`, you simply clear the bitvector positions you set earlier (in the example that would be `a`, `p`, `l`, `i`, `c`, `t`, `o`, and `n`)
+The word list.
+
+The word list is stored of a sequence of words, each encoded as a sequence of 8-bit characters and terminated by the byte value `0x00`. The list itself is terminated with the byte value `0x01`.
+
+Note that the algorithm doesn't care about the particular characters. It only cares if they are identical or not, so even though the algorithm doesn't support UTF-8 and is limited to a character set of 254 characters,
+ignoring Asian alphabets, a list of words usually don't contain more than 254 distinct characters, so you can practially just map lettters to a value between 2 and 255.
+
+### Operation
+
+**Initialization**
+
+
 
 ## How to test
 
-TODO
+You can compile the client as follows:
+
+```sh
+mkdir -p build
+cmake -G Ninja -B build .
+cmake --build build
+```
+
+Next, you can run the test tool:
+
+```sh
+./build/client/client --device=/dev/ttyUSB2 --test
+```
+
+This will load 1024 words of random length and characters into the SRAM and then perform a bunch of searches, verifying that the returned result is correct.
 
 ## External hardware
 
-List external hardware used in your project (e.g. PMOD, LED display, etc), if any
+To operate, the device needs a SPI PSRAM PMOD. The design is tested with QQSPI PSRAM PMOD from Machdyne, but any memory PMOD will work as long as it supports the zero-latency READ (`0x03`) and WRITE (`0x02`) commands as well as using pin 0 as `SS#`. Note, that this makes the SRAM/Flash PMOD from mole99 incompatible.

@@ -94,9 +94,9 @@ class Accelerator(object):
             for c in word:
                 await self._bus.write(address, ord(c))
                 address += 1
-            await self._bus.write(address, 0xFE)
+            await self._bus.write(address, 0x00)
             address += 1
-        await self._bus.write(address, 0xFF)
+        await self._bus.write(address, 0x01)
 
     async def search(self, search_word: str):
         assert (await self._bus.read(self.CTRL_ADDR) & self.ACTIVE_FLAG) == 0

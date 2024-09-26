@@ -65,8 +65,8 @@ private:
 
     enum SpecialChars : std::uint8_t
     {
-        WordTerminator = 0xFE,
-        ListTerminator = 0xFF
+        WordTerminator = 0x00,
+        ListTerminator = 0x01
     };
 
     asio::awaitable<void> writeByte(std::uint32_t address, std::uint8_t value);

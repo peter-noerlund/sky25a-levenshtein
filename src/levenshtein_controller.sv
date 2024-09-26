@@ -47,6 +47,9 @@ module levenshtein_controller
     localparam ADDR_IDX_HI = 2'd2;
     localparam ADDR_IDX_LO = 2'd3;
 
+    localparam WORD_TERMINATOR = 8'h00;
+    localparam DICT_TERMINATOR = 8'h01;
+
     reg enabled;
     reg [4:0] word_length;
     wire [BITVECTOR_WIDTH - 1 : 0] mask;
@@ -152,7 +155,7 @@ module levenshtein_controller
                             cyc <= 1'b1;
                         end else if (wbm_ack_i) begin
                             pm[7:0] <= wbm_dat_i;
-                            if (wbm_dat_i == 8'hFE) begin
+                            if (wbm_dat_i == WORD_TERMINATOR) begin
                                 if (d < best_distance) begin
                                     best_idx <= idx;
                                     best_distance <= d;
@@ -162,7 +165,7 @@ module levenshtein_controller
                                 vn <= BITVECTOR_WIDTH'(0);
                                 vp <= initial_vp;
                                 state <= STATE_READ_DICT;
-                            end else if (wbm_dat_i == 8'hFF) begin
+                            end else if (wbm_dat_i == DICT_TERMINATOR) begin
                                 enabled <= 1'b0;
                             end else begin
                                 state <= STATE_READ_VECTOR_HI;
