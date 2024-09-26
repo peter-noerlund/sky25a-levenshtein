@@ -51,7 +51,7 @@ public:
 private:
     enum ControlFlags : std::uint8_t
     {
-        EnableFlag = 0x01
+        ActiveFlag = 0x80
     };
 
     enum Address : std::uint32_t

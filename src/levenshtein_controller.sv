@@ -90,14 +90,14 @@ module levenshtein_controller
     assign hp = vn | ~(d0 | vp);
     assign hn = d0 & vp;
 
-    assign next_word_length = wbs_dat_i[5:1];
+    assign next_word_length = wbs_dat_i[4:0];
     assign next_initial_vp = (1 << next_word_length) - 1;
     assign initial_vp = (1 << word_length) - 1;
     assign mask = 1 << (word_length - 1);
 
     always_comb begin
         case (wbs_adr_i[1:0])
-            ADDR_CTRL: wbs_dat_o = {2'b00, word_length, enabled};
+            ADDR_CTRL: wbs_dat_o = {enabled, 2'b00, word_length};
             ADDR_DISTANCE: wbs_dat_o = best_distance;
             ADDR_IDX_HI: wbs_dat_o = best_idx[15:8];
             ADDR_IDX_LO: wbs_dat_o = best_idx[7:0];
@@ -126,7 +126,7 @@ module levenshtein_controller
             if (wbs_cyc_i && wbs_stb_i && !wbs_ack_o) begin
                 if (wbs_we_i) begin
                     if (wbs_adr_i[1:0] == ADDR_CTRL) begin
-                        enabled <= wbs_dat_i[0];
+                        enabled <= 1'b1;
                         word_length <= next_word_length;
 
                         dict_address <= DICT_ADDR_WIDTH'(0);

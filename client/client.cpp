@@ -36,7 +36,7 @@ asio::awaitable<Client::Result> Client::search(std::string_view word)
     // Verify accelerator is idle
 
     auto ctrl = co_await readByte(ControlAddress);
-    if ((ctrl & EnableFlag) != 0)
+    if ((ctrl & ActiveFlag) != 0)
     {
         throw std::runtime_error("Cannot search while another search is in progress");
     }
@@ -65,14 +65,14 @@ asio::awaitable<Client::Result> Client::search(std::string_view word)
 
     // Initiate search
 
-    co_await writeByte(ControlAddress, (word.size() << 1) | EnableFlag);
+    co_await writeByte(ControlAddress, word.size());
 
     while (true)
     {
         co_await m_context.wait(std::chrono::microseconds(10));
 
         ctrl = co_await readByte(ControlAddress);
-        if ((ctrl & EnableFlag) == 0)
+        if ((ctrl & ActiveFlag) == 0)
         {
             break;
         }

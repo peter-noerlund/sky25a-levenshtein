@@ -78,7 +78,7 @@ class Accelerator(object):
     VECTORMAP_BASE_ADDR = 0x400000
     DICTIONARY_BASE_ADDR = 0x600000
 
-    ENABLE_FLAG = 1
+    ACTIVE_FLAG = 0x80
 
     def __init__(self, bus):
         self._bus = bus
@@ -99,7 +99,7 @@ class Accelerator(object):
         await self._bus.write(address, 0xFF)
 
     async def search(self, search_word: str):
-        assert (await self._bus.read(self.CTRL_ADDR) & self.ENABLE_FLAG) == 0
+        assert (await self._bus.read(self.CTRL_ADDR) & self.ACTIVE_FLAG) == 0
 
         vector_map = {}
         for c in search_word:
@@ -113,18 +113,18 @@ class Accelerator(object):
             await self._bus.write(self.VECTORMAP_BASE_ADDR + ord(c) * 2, (vector >> 8) & 0xFF)
             await self._bus.write(self.VECTORMAP_BASE_ADDR + ord(c) * 2 + 1, vector & 0xFF)
 
-        await self._bus.write(self.CTRL_ADDR, (len(search_word) << 1) | self.ENABLE_FLAG)
+        await self._bus.write(self.CTRL_ADDR, len(search_word))
 
-        assert (await self._bus.read(self.CTRL_ADDR) & self.ENABLE_FLAG) == self.ENABLE_FLAG
+        assert (await self._bus.read(self.CTRL_ADDR) & self.ACTIVE_FLAG) == self.ACTIVE_FLAG
 
         for i in range(0, 20):
             await Timer(100, units="us")
 
             ctrl = await self._bus.read(self.CTRL_ADDR)
-            if (ctrl & self.ENABLE_FLAG) == 0:
+            if (ctrl & self.ACTIVE_FLAG) == 0:
                 break
 
-        assert (ctrl & self.ENABLE_FLAG) == 0
+        assert (ctrl & self.ACTIVE_FLAG) == 0
 
         for c in vector_map.keys():
             await self._bus.write(self.VECTORMAP_BASE_ADDR + ord(c) * 2, 0x00)
