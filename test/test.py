@@ -53,7 +53,65 @@ class Uart(object):
         return value
 
 
-class Wishbone(object):
+class SPIWishbone(object):
+    def __init__(self, dut, period=20, period_units="ns"):
+        self._dut = dut
+        self._half_period = period / 2
+        self._half_period_units = period_units
+        self._dut.ui_in.value = (int(self._dut.ui_in) & ~0x60) | 0x10   # Deassert SS# and clear MOSI and SCK
+
+    async def write(self, address: int, data: int) -> None:
+        await self._exec(0x80000000 | ((address & 0x7FFFFF) << 8) | data)
+    
+    async def read(self, address: int) -> int:
+        return await self._exec((address & 0x7FFFFF) << 8)
+
+    async def _exec(self, data: int) -> int:
+        # Assert SS#
+        self._dut.ui_in.value = self._dut.ui_in.value & ~0x10
+
+        # Transmit bits
+        for i in range(0, 32):
+            #self._dut.ui_in.value = (int(self._dut.ui_in) & ~0x50) | (0x60 if data & 0x80000000 != 0 else 0x00)
+            data >>= 1
+            await self._clock()
+
+        # Wait for start bit
+        self._dut.ui_in.value = self._dut.ui_in.value | 0x10 # Deassert SS#
+        await self._clock()
+
+        return
+
+        for i in range(0, 1000):
+            if self._dut.uo_out[7] == 1:
+                break
+            await self._clock()
+
+        assert self._dut.uo_out[7] == 1
+
+        await self._clock()
+
+        assert self._dut.uo_out[7] == 1
+
+        # Read response byte
+        value = 0
+        for i in range(0, 8):
+            await self._clock()
+            value = (value << 1) | (1 if self._uo_out[7] == 1 else 0)
+
+        self._dut.ui_in = int(self._dut.ui_in) | 0x10 # Deassert SS#
+
+        return value
+
+    async def _clock(self) -> None:
+        await Timer(self._half_period, units=self._half_period_units)
+        self._dut.ui_in.value = self._dut.ui_in.value | 0x20
+        await Timer(self._half_period, units=self._half_period_units)
+        self._dut.ui_in.value = self._dut.ui_in.value & ~0x20
+        
+
+
+class UARTWishbone(object):
     def __init__(self, transport):
         self._transport = transport
 
@@ -166,7 +224,7 @@ async def test_project(dut):
     # Reset
     dut._log.info("Reset")
     dut.ena.value = 1
-    dut.ui_in.value = 0x08
+    dut.ui_in.value = 0x18
     dut.uio_in.value = 0
     dut.rst_n.value = 0
     await ClockCycles(dut.clk, 10)
@@ -176,8 +234,8 @@ async def test_project(dut):
 
     await ClockCycles(dut.clk, 10)
 
-    uart = Uart(dut)
-    wishbone = Wishbone(uart)
+    #uart = Uart(dut)
+    wishbone = SPIWishbone(dut)
     accel = Accelerator(wishbone)
 
     await accel.init()

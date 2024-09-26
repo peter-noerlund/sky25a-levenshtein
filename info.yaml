@@ -20,7 +20,8 @@ project:
     - tt_um_levenshtein.v
     - levenshtein_controller.sv
     - spi_controller.sv
-    - uart_wishbone_bridge.sv
+    #- uart_wishbone_bridge.sv
+    - spi_wishbone_bridge.sv
     - wb_arbiter.sv
     - wb_interconnect.sv
 

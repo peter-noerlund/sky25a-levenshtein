@@ -19,21 +19,20 @@ module tt_um_levenshtein
     );
     /* verilator lint_on UNUSEDSIGNAL */
 
-    assign uo_out[7:5] = 3'b000;
-    assign uo_out[3:0] = 4'b0000;
+    assign uo_out[6:0] = 7'b0000000;
     assign uio_oe = 8'b00001011;
     assign uio_out[2] = 1'b0;
     assign uio_out[7:4] = 4'b0000;
 
-    wire uart_cyc;
-    wire uart_stb;
-    wire [22:0] uart_adr;
-    wire [7:0] uart_dwr;
-    wire uart_we;
-    wire uart_ack;
-    wire uart_err;
-    wire uart_rty;
-    wire [7:0] uart_drd;
+    wire spi_cyc;
+    wire spi_stb;
+    wire [22:0] spi_adr;
+    wire [7:0] spi_dwr;
+    wire spi_we;
+    wire spi_ack;
+    wire spi_err;
+    wire spi_rty;
+    wire [7:0] spi_drd;
 
     wire sram_cyc;
     wire sram_stb;
@@ -75,22 +74,24 @@ module tt_um_levenshtein
     wire ctrl_slave_sel;
     /* verilator lint_on UNUSEDSIGNAL */
 
-    uart_wishbone_bridge uart(
+    spi_wishbone_bridge spi(
         .clk_i(clk),
         .rst_i(!rst_n),
 
-        .uart_rxd(ui_in[3]),
-        .uart_txd(uo_out[4]),
+        .spi_ss_n(ui_in[4]),
+        .spi_sck(ui_in[5]),
+        .spi_mosi(ui_in[6]),
+        .spi_miso(uo_out[7]),
 
-        .cyc_o(uart_cyc),
-        .stb_o(uart_stb),
-        .adr_o(uart_adr),
-        .dat_o(uart_dwr),
-        .we_o(uart_we),
-        .ack_i(uart_ack),
-        .err_i(uart_err),
-        .rty_i(uart_rty),
-        .dat_i(uart_drd)
+        .cyc_o(spi_cyc),
+        .stb_o(spi_stb),
+        .adr_o(spi_adr),
+        .dat_o(spi_dwr),
+        .we_o(spi_we),
+        .ack_i(spi_ack),
+        .err_i(spi_err),
+        .rty_i(spi_rty),
+        .dat_i(spi_drd)
     );
 
     levenshtein_controller #(.MASTER_ADDR_WIDTH(22), .SLAVE_ADDR_WIDTH(22)) levenshtein_ctrl (
@@ -143,16 +144,16 @@ module tt_um_levenshtein
         .clk_i(clk),
         .rst_i(!rst_n),
 
-        .wbm0_cyc_i(uart_cyc),
-        .wbm0_stb_i(uart_stb),
-        .wbm0_adr_i(uart_adr),
-        .wbm0_we_i(uart_we),
+        .wbm0_cyc_i(spi_cyc),
+        .wbm0_stb_i(spi_stb),
+        .wbm0_adr_i(spi_adr),
+        .wbm0_we_i(spi_we),
         .wbm0_sel_i(1'b0),
-        .wbm0_dat_i(uart_dwr),
-        .wbm0_ack_o(uart_ack),
-        .wbm0_err_o(uart_err),
-        .wbm0_rty_o(uart_rty),
-        .wbm0_dat_o(uart_drd),
+        .wbm0_dat_i(spi_dwr),
+        .wbm0_ack_o(spi_ack),
+        .wbm0_err_o(spi_err),
+        .wbm0_rty_o(spi_rty),
+        .wbm0_dat_o(spi_drd),
 
         .wbm1_cyc_i(ctrl_master_cyc),
         .wbm1_stb_i(ctrl_master_stb),

@@ -32,6 +32,8 @@ module uart_wishbone_bridge
     localparam STATE_WRITE_UART_DATA_BITS = 3'd6;
     localparam STATE_WRITE_UART_STOP_BIT = 3'd7;
 
+    wire rxd;
+    reg [1:0] uart_rxd_shift;
     reg [3:0] clk_counter;
     reg [31:0] buffer;
     reg [2:0] state;
@@ -51,6 +53,7 @@ module uart_wishbone_bridge
 
     assign cyc_o = cyc;
     assign stb_o = cyc;
+    assign rxd = uart_rxd_shift[1];
 
     always @ (posedge clk_i) begin
         if (rst_i) begin
@@ -61,10 +64,11 @@ module uart_wishbone_bridge
             cyc <= 1'b0;
             buffer <= 32'h00000000;
             uart_txd <= 1'b1;
+            uart_rxd_shift <= 2'b11;
         end else begin
             case (state)
                 STATE_READ_UART_SYNC: begin
-                    if (!uart_rxd) begin
+                    if (!rxd) begin
                         state <= STATE_READ_UART_START_BIT;
                     end
                 end
@@ -72,7 +76,7 @@ module uart_wishbone_bridge
                 STATE_READ_UART_START_BIT: begin
                     if (clk_counter[2:0] == 3'd6) begin
                         clk_counter[2:0] <= 3'd0;
-                        if (!uart_rxd) begin
+                        if (!rxd) begin
                             state <= STATE_READ_UART_DATA_BITS;
                         end else begin
                             state <= STATE_READ_UART_SYNC;
@@ -84,7 +88,7 @@ module uart_wishbone_bridge
 
                 STATE_READ_UART_DATA_BITS: begin
                     if (clk_counter == 4'd15) begin
-                        buffer <= {buffer[30:0], uart_rxd};
+                        buffer <= {buffer[30:0], rxd};
                         if (bit_counter == 3'd7) begin
                             state <= STATE_READ_UART_STOP_BIT;
                         end
@@ -95,7 +99,7 @@ module uart_wishbone_bridge
 
                 STATE_READ_UART_STOP_BIT: begin
                     if (clk_counter == 4'd15) begin
-                        if (!uart_rxd) begin
+                        if (!rxd) begin
                             state <= STATE_READ_UART_SYNC;
                         end else begin
                             if (byte_counter == 2'd3) begin
@@ -160,6 +164,8 @@ module uart_wishbone_bridge
                     clk_counter <= clk_counter + 4'd1;
                 end
             endcase
+
+            uart_rxd_shift <= {uart_rxd_shift[0], uart_rxd};
         end
     end
 endmodule

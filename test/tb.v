@@ -48,7 +48,7 @@ module tb ();
         .rst_n  (rst_n)     // not reset
     );
 
-    qspi_sram #(.VERBOSE(0)) pmod_sram(
+    qspi_sram #(.VERBOSE(1)) pmod_sram(
         .sck(uio_out[3]),
         .ss_n(uio_out[0]),
         .sio_in({uio_out[5], uio_out[4], uio_out[2], uio_out[1]}),
