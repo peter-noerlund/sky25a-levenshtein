@@ -58,9 +58,7 @@ private:
     {
         ControlAddress = 0x0000000,
         DistanceAddress = 0x0000001,
-        MaskAddress = 0x000002,
-        VpAddress = 0x000004,
-        IndexAddress = 0x0000006,
+        IndexAddress = 0x0000002,
         BaseBitvectorAddress = 0x400000,
         BaseDictionaryAddress = 0x600000
     };

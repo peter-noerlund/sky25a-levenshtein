@@ -74,9 +74,7 @@ class Wishbone(object):
 class Accelerator(object):
     CTRL_ADDR = 0
     DISTANCE_ADDR = 1
-    MASK_ADDR = 2
-    VP_ADDR = 4
-    INDEX_ADDR = 6
+    INDEX_ADDR = 2
     VECTORMAP_BASE_ADDR = 0x400000
     DICTIONARY_BASE_ADDR = 0x600000
 
@@ -114,20 +112,6 @@ class Accelerator(object):
         for c, vector in vector_map.items():
             await self._bus.write(self.VECTORMAP_BASE_ADDR + ord(c) * 2, (vector >> 8) & 0xFF)
             await self._bus.write(self.VECTORMAP_BASE_ADDR + ord(c) * 2 + 1, vector & 0xFF)
-
-        mask = 1 << (len(search_word) - 1)
-        await self._bus.write(self.MASK_ADDR, (mask >> 8) & 0xFF)
-        await self._bus.write(self.MASK_ADDR + 1, mask & 0xFF)
-
-        vp = (1 << len(search_word)) - 1
-        await self._bus.write(self.VP_ADDR, (vp >> 8) & 0xFF)
-        await self._bus.write(self.VP_ADDR + 1, vp & 0xFF)
-
-        # Verify
-        assert await self._bus.read(self.MASK_ADDR) == (mask >> 8) & 0xFF
-        assert await self._bus.read(self.MASK_ADDR + 1) == mask & 0xFF
-        assert await self._bus.read(self.VP_ADDR) == (vp >> 8) & 0xFF
-        assert await self._bus.read(self.VP_ADDR + 1) == vp & 0xFF
 
         await self._bus.write(self.CTRL_ADDR, (len(search_word) << 1) | self.ENABLE_FLAG)
 
