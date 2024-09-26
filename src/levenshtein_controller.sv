@@ -49,10 +49,9 @@ module levenshtein_controller
 
     reg enabled;
     reg [4:0] word_length;
-    reg [BITVECTOR_WIDTH - 1 : 0] mask;
-    reg [BITVECTOR_WIDTH - 1 : 0] initial_vp;
+    wire [BITVECTOR_WIDTH - 1 : 0] mask;
+    wire [BITVECTOR_WIDTH - 1 : 0] initial_vp;
     wire [4:0] next_word_length;
-    wire [BITVECTOR_WIDTH - 1 : 0] next_mask;
     wire [BITVECTOR_WIDTH - 1 : 0] next_initial_vp;
 
     localparam STATE_READ_DICT = 2'd0;
@@ -92,8 +91,9 @@ module levenshtein_controller
     assign hn = d0 & vp;
 
     assign next_word_length = wbs_dat_i[5:1];
-    assign next_mask = 1 << (next_word_length - 1);
     assign next_initial_vp = (1 << next_word_length) - 1;
+    assign initial_vp = (1 << word_length) - 1;
+    assign mask = 1 << (word_length - 1);
 
     always_comb begin
         case (wbs_adr_i[1:0])
@@ -122,16 +122,12 @@ module levenshtein_controller
             best_distance <= DISTANCE_WIDTH'(-1);
 
             word_length <= 5'd0;
-            mask <= 16'h0000;
-            initial_vp <= 16'h0000;
         end else begin
             if (wbs_cyc_i && wbs_stb_i && !wbs_ack_o) begin
                 if (wbs_we_i) begin
                     if (wbs_adr_i[1:0] == ADDR_CTRL) begin
                         enabled <= wbs_dat_i[0];
                         word_length <= next_word_length;
-                        mask <= next_mask;
-                        initial_vp <= next_initial_vp;
 
                         dict_address <= DICT_ADDR_WIDTH'(0);
                         d <= DISTANCE_WIDTH'(next_word_length);
