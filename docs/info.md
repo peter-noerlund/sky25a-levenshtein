@@ -44,15 +44,13 @@ The lower half of the memory space is used for registers and the upper half of t
 
 The address space is basically as follows:
 
-| Address  | Size | Access | Identifier  | Type | Description                                         |
-|----------|------|--------|-------------|------|-----------------------------------------------------|
-| 0x000000 | 1    | R/W    | `CTRL`      | Reg  | Control register. Bit 0=Enable. Bit 5-1=Word length |
-| 0x000001 | 1    | R/O    | `DISTANCE`  | Reg  | Levenshtein distance                                |
-| 0x000002 | 2    | R/W    | `MASK`      | Reg  | Mask                                                |
-| 0x000004 | 2    | R/W    | `VP`        | Reg  | Initial VP value                                    |
-| 0x000006 | 2    | R/O    | `INDEX`     | Reg  | Word index                                          |
-| 0x400000 | 512  | R/W    | `VECTORMAP` | SPI  | Vector map                                          |
-| 0x600000 | 2M   | R/W    | `DICT`      | SPI  | Dictionary                                          |                               
+| Address  | Size | Access | Identifier  | Type | Description                                          |
+|----------|------|--------|-------------|------|------------------------------------------------------|
+| 0x000000 | 1    | R/W    | `CTRL`      | Reg  | Control register. Bit 0-4=Word length. Bit 7=Running |
+| 0x000001 | 1    | R/O    | `DISTANCE`  | Reg  | Levenshtein distance                                 |
+| 0x000002 | 2    | R/O    | `INDEX`     | Reg  | Word index                                           |
+| 0x400000 | 512  | R/W    | `VECTORMAP` | SPI  | Vector map                                           |
+| 0x600000 | 2M   | R/W    | `DICT`      | SPI  | Dictionary                                           |
 
 #### Operation
 
@@ -87,17 +85,9 @@ n = 16'b00000100_00000000;  // __________n
 
 You then store each bitvector at address `VECTORMAP + char * 2`. The bitvectors is stored in bit endian byte order.
 
-You then need to store the length in the word length register (`LENGTH`)
+Finally, you store the length in the `CTRL`register which will then initiate the accelerator
 
-And a mask with the length-th bit set to 1 (`1 << (length - 1)`) in the 16-bit mask register (address `MASK`) using bit endian byte order.
-
-And a VP value which is simly the first length bits set to 1 (`(1 << length) - 1`) in the 16-bit vp mast register (address `VP`) using big endian byte order.
-
-Finally, you store a `1` in the control register at address `CTRL`.
-
-The accelerator will now scan through the dictionary to find matches.
-
-To know when the algorithm is done, you poll the control register (`CTRL`) at a regular interval until the least significant bit bit is 0.
+To know when the algorithm is done, you poll the control register (`CTRL`) at a regular interval until the most significant bit is 0.
 
 You can then read out the levenshtein distance at address `DISTANCE` and the index of the word in the dictionary which was the best match at `INDEX` (big endian).
 
