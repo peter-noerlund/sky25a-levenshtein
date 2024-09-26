@@ -38,6 +38,9 @@ module uart_wishbone_bridge
     reg [1:0] byte_counter;
     reg [2:0] bit_counter;
     reg cyc;
+    reg [1:0] rxd_sync;
+
+    wire rxd;
 
     // Data is transmitted little endian
 
@@ -52,6 +55,8 @@ module uart_wishbone_bridge
     assign cyc_o = cyc;
     assign stb_o = cyc;
 
+    assign rxd = rxd_sync[1];
+
     always @ (posedge clk_i) begin
         if (rst_i) begin
             state <= STATE_READ_UART_SYNC;
@@ -64,7 +69,7 @@ module uart_wishbone_bridge
         end else begin
             case (state)
                 STATE_READ_UART_SYNC: begin
-                    if (!uart_rxd) begin
+                    if (!rxd) begin
                         state <= STATE_READ_UART_START_BIT;
                     end
                 end
@@ -72,7 +77,7 @@ module uart_wishbone_bridge
                 STATE_READ_UART_START_BIT: begin
                     if (clk_counter[2:0] == 3'd6) begin
                         clk_counter[2:0] <= 3'd0;
-                        if (!uart_rxd) begin
+                        if (!rxd) begin
                             state <= STATE_READ_UART_DATA_BITS;
                         end else begin
                             state <= STATE_READ_UART_SYNC;
@@ -84,7 +89,7 @@ module uart_wishbone_bridge
 
                 STATE_READ_UART_DATA_BITS: begin
                     if (clk_counter == 4'd15) begin
-                        buffer <= {buffer[30:0], uart_rxd};
+                        buffer <= {buffer[30:0], rxd};
                         if (bit_counter == 3'd7) begin
                             state <= STATE_READ_UART_STOP_BIT;
                         end
@@ -95,7 +100,7 @@ module uart_wishbone_bridge
 
                 STATE_READ_UART_STOP_BIT: begin
                     if (clk_counter == 4'd15) begin
-                        if (!uart_rxd) begin
+                        if (!rxd) begin
                             state <= STATE_READ_UART_SYNC;
                         end else begin
                             if (byte_counter == 2'd3) begin
@@ -161,5 +166,7 @@ module uart_wishbone_bridge
                 end
             endcase
         end
+
+        rxd_sync <= {rxd_sync[0], uart_rxd};
     end
 endmodule
