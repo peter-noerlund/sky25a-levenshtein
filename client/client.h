@@ -60,7 +60,7 @@ private:
         DistanceAddress = 0x0000001,
         IndexAddress = 0x0000002,
         BaseBitvectorAddress = 0x400000,
-        BaseDictionaryAddress = 0x600000
+        BaseDictionaryAddress = 0x400200
     };
 
     enum SpecialChars : std::uint8_t

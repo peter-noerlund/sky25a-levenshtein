@@ -50,6 +50,8 @@ module levenshtein_controller
     localparam WORD_TERMINATOR = 8'h00;
     localparam DICT_TERMINATOR = 8'h01;
 
+    localparam DICT_ADDR = 512;
+
     reg enabled;
     reg [4:0] word_length;
     wire [BITVECTOR_WIDTH - 1 : 0] mask;
@@ -62,7 +64,7 @@ module levenshtein_controller
     localparam STATE_READ_VECTOR_LO = 2'd2;
     localparam STATE_LEVENSHTEIN = 2'd3;
 
-    localparam DICT_ADDR_WIDTH = MASTER_ADDR_WIDTH - 1;
+    localparam DICT_ADDR_WIDTH = MASTER_ADDR_WIDTH;
 
     reg [1:0] state;
     reg [DICT_ADDR_WIDTH - 1 : 0] dict_address;
@@ -84,7 +86,7 @@ module levenshtein_controller
     assign wbm_cyc_o = cyc;
     assign wbm_stb_o = cyc;
     assign wbm_adr_o =
-        (state == STATE_READ_DICT ? {1'b1, dict_address} :
+        (state == STATE_READ_DICT ? dict_address :
         (state == STATE_READ_VECTOR_HI ? MASTER_ADDR_WIDTH'({pm[7:0], 1'b0}) :  MASTER_ADDR_WIDTH'({pm[7:0], 1'b1})));
     assign wbm_we_o = 1'b0;
     assign wbm_dat_o = 8'h00;
@@ -114,7 +116,7 @@ module levenshtein_controller
 
             cyc <= 1'b0;
 
-            dict_address <= DICT_ADDR_WIDTH'(0);
+            dict_address <= DICT_ADDR_WIDTH'(DICT_ADDR);
             d <= DISTANCE_WIDTH'(0);
             vp <= BITVECTOR_WIDTH'(0);
             vn <= BITVECTOR_WIDTH'(0);
@@ -132,7 +134,7 @@ module levenshtein_controller
                         enabled <= 1'b1;
                         word_length <= next_word_length;
 
-                        dict_address <= DICT_ADDR_WIDTH'(0);
+                        dict_address <= DICT_ADDR_WIDTH'(DICT_ADDR);
                         d <= DISTANCE_WIDTH'(next_word_length);
                         vn <= BITVECTOR_WIDTH'(0);
                         vp <= next_initial_vp;

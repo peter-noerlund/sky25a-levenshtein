@@ -50,7 +50,7 @@ The address space is basically as follows:
 | 0x000001 | 1    | R/O    | `DISTANCE`  |
 | 0x000002 | 2    | R/O    | `INDEX`     |
 | 0x400000 | 512  | R/W    | `VECTORMAP` |
-| 0x600000 | 2M   | R/W    | `DICT`      |
+| 0x400200 | 4M   | R/W    | `DICT`      |
 
 **CTRL**
 
@@ -130,3 +130,5 @@ This will load 1024 words of random length and characters into the SRAM and then
 ## External hardware
 
 To operate, the device needs a SPI PSRAM PMOD. The design is tested with QQSPI PSRAM PMOD from Machdyne, but any memory PMOD will work as long as it supports the zero-latency READ (`0x03`) and WRITE (`0x02`) commands as well as using pin 0 as `SS#`. Note, that this makes the SRAM/Flash PMOD from mole99 incompatible.
+
+The spi-ram-emu project for the RP2040 can be used to emulate a SRAM PMOD, but it would need to be modified to use 24-bit addresses to work.
