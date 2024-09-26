@@ -40,8 +40,6 @@ Each command consists of 4 input bytes and 1 output byte:
 
 As indicated by the UART protocol, the address space is 23 bits.
 
-The lower half of the memory space is used for registers and the upper half of the memory space is accessing an external SPI PSRAM.
-
 The address space is basically as follows:
 
 | Address  | Size | Access | Identifier  |
@@ -92,7 +90,7 @@ If the search word is `application`, the bit vectors will look as follows:
 | `n`    | `0x6E` | `16'b00000100_00000000` (`__________n`) |
 | *      | *      | `16'b00000000_00000000` (`___________`) |
 
-Since each vector is 16-bit, the corresponding address is `0x400000 + index * 2`
+Since each vector is 16-bit, the corresponding address is `0x200 + index * 2`
 
 **DICT**
 
@@ -102,12 +100,6 @@ The word list is stored of a sequence of words, each encoded as a sequence of 8-
 
 Note that the algorithm doesn't care about the particular characters. It only cares if they are identical or not, so even though the algorithm doesn't support UTF-8 and is limited to a character set of 254 characters,
 ignoring Asian alphabets, a list of words usually don't contain more than 254 distinct characters, so you can practially just map lettters to a value between 2 and 255.
-
-### Operation
-
-**Initialization**
-
-
 
 ## How to test
 
@@ -129,6 +121,11 @@ This will load 1024 words of random length and characters into the SRAM and then
 
 ## External hardware
 
-To operate, the device needs a SPI PSRAM PMOD. The design is tested with QQSPI PSRAM PMOD from Machdyne, but any memory PMOD will work as long as it supports the zero-latency READ (`0x03`) and WRITE (`0x02`) commands as well as using pin 0 as `SS#`. Note, that this makes the SRAM/Flash PMOD from mole99 incompatible.
+To operate, the device needs an SPI PSRAM PMOD. The design is tested with the QQSPI PSRAM PMOD from Machdyne, but any memory PMOD will work as long as it supports:
 
-The spi-ram-emu project for the RP2040 can be used to emulate a SRAM PMOD, but it would need to be modified to use 24-bit addresses to work.
+* WRITE (`0x02`) with no latency
+* READ (`0x03`) with no latency
+* 24-bit addresses
+* Uses pin 0 for `SS#`.
+
+Note, that this makes the SRAM/Flash PMOD from mole99 incompatible, but the spi-ram-emu project for the RP2040 can be used if it is changed to 24-bit adressing (It can just ignore the eight most significant bits)
