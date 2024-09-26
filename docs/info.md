@@ -49,8 +49,8 @@ The address space is basically as follows:
 | 0x000000 | 1    | R/W    | `CTRL`      |
 | 0x000001 | 1    | R/O    | `DISTANCE`  |
 | 0x000002 | 2    | R/O    | `INDEX`     |
-| 0x400000 | 512  | R/W    | `VECTORMAP` |
-| 0x400200 | 4M   | R/W    | `DICT`      |
+| 0x000200 | 512  | R/W    | `VECTORMAP` |
+| 0x000400 | 8M   | R/W    | `DICT`      |
 
 **CTRL**
 

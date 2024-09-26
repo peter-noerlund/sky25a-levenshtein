@@ -50,7 +50,7 @@ module levenshtein_controller
     localparam WORD_TERMINATOR = 8'h00;
     localparam DICT_TERMINATOR = 8'h01;
 
-    localparam DICT_ADDR = 512;
+    localparam DICT_ADDR = 'h400;
 
     reg enabled;
     reg [4:0] word_length;
@@ -87,7 +87,7 @@ module levenshtein_controller
     assign wbm_stb_o = cyc;
     assign wbm_adr_o =
         (state == STATE_READ_DICT ? dict_address :
-        (state == STATE_READ_VECTOR_HI ? MASTER_ADDR_WIDTH'({pm[7:0], 1'b0}) :  MASTER_ADDR_WIDTH'({pm[7:0], 1'b1})));
+        (state == STATE_READ_VECTOR_HI ? MASTER_ADDR_WIDTH'({1'b1, pm[7:0], 1'b0}) :  MASTER_ADDR_WIDTH'({1'b1, pm[7:0], 1'b1})));
     assign wbm_we_o = 1'b0;
     assign wbm_dat_o = 8'h00;
 
