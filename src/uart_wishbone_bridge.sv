@@ -42,8 +42,6 @@ module uart_wishbone_bridge
     reg cyc;
     reg [1:0] rxd_sync;
 
-    wire rxd;
-
     // Data is transmitted little endian
 
     assign we_o = buffer[24];
