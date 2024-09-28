@@ -54,7 +54,13 @@ class Uart(object):
 
 
 class SPIWishbone(object):
-    def __init__(self, dut, period=20, period_units="ns"):
+    SS_N = 0x10
+    SCK = 0x20
+    MOSI = 0x40
+    MISO = 0x80
+    UI_IN_MASK = ~0x70
+
+    def __init__(self, dut, period=50, period_units="ns"):
         self._dut = dut
         self._half_period = period / 2
         self._half_period_units = period_units
@@ -67,48 +73,50 @@ class SPIWishbone(object):
         return await self._exec((address & 0x7FFFFF) << 8)
 
     async def _exec(self, data: int) -> int:
-        # Assert SS#
-        self._dut.ui_in.value = self._dut.ui_in.value & ~0x10
-
         # Transmit bits
         for i in range(0, 32):
-            #self._dut.ui_in.value = (int(self._dut.ui_in) & ~0x50) | (0x60 if data & 0x80000000 != 0 else 0x00)
-            data >>= 1
-            await self._clock()
+            if data & 0x80000000 == 0:
+                self._dut.ui_in.value = self._dut.ui_in.value & self.UI_IN_MASK
+            else:
+                self._dut.ui_in.value = (self._dut.ui_in.value & self.UI_IN_MASK) | self.MOSI
+            await Timer(self._half_period, units=self._half_period_units)
 
-        # Wait for start bit
-        self._dut.ui_in.value = self._dut.ui_in.value | 0x10 # Deassert SS#
-        await self._clock()
+            if data & 0x80000000 == 0:
+                self._dut.ui_in.value = (self._dut.ui_in.value & self.UI_IN_MASK) | self.SCK
+            else:
+                self._dut.ui_in.value = (self._dut.ui_in.value & self.UI_IN_MASK) | (self.MOSI | self.SCK)
+            await Timer(self._half_period, units=self._half_period_units)
 
-        return
+            data <<= 1
 
+        # Wait for response
         for i in range(0, 1000):
+            self._dut.ui_in.value = self._dut.ui_in.value & self.UI_IN_MASK
+            await Timer(self._half_period, units=self._half_period_units)
+
             if self._dut.uo_out[7] == 1:
                 break
-            await self._clock()
 
-        assert self._dut.uo_out[7] == 1
-
-        await self._clock()
+            self._dut.ui_in.value = (self._dut.ui_in.value & self.UI_IN_MASK) | self.SCK
+            await Timer(self._half_period, units=self._half_period_units)
 
         assert self._dut.uo_out[7] == 1
 
         # Read response byte
         value = 0
         for i in range(0, 8):
-            await self._clock()
-            value = (value << 1) | (1 if self._uo_out[7] == 1 else 0)
+            self._dut.ui_in.value = (self._dut.ui_in.value & self.UI_IN_MASK) | self.SCK
+            await Timer(self._half_period, units=self._half_period_units)
 
-        self._dut.ui_in = int(self._dut.ui_in) | 0x10 # Deassert SS#
+            self._dut.ui_in.value = self._dut.ui_in.value & self.UI_IN_MASK
+            await Timer(self._half_period, units=self._half_period_units)
+
+            value = (value << 1) | (1 if self._dut.uo_out[7] == 1 else 0)
+
+        self._dut.ui_in = (self._dut.ui_in.value & self.UI_IN_MASK) | self.SS_N
+        await Timer(self._half_period, units=self._half_period_units)
 
         return value
-
-    async def _clock(self) -> None:
-        await Timer(self._half_period, units=self._half_period_units)
-        self._dut.ui_in.value = self._dut.ui_in.value | 0x20
-        await Timer(self._half_period, units=self._half_period_units)
-        self._dut.ui_in.value = self._dut.ui_in.value & ~0x20
-        
 
 
 class UARTWishbone(object):
@@ -142,7 +150,7 @@ class Accelerator(object):
         self._bus = bus
 
     async def init(self):
-        for i in range(1, 256):
+        for i in range(0, 256):
             await self._bus.write(self.VECTORMAP_BASE_ADDR + i * 2, 0)
             await self._bus.write(self.VECTORMAP_BASE_ADDR + i * 2 + 1, 0)
 
@@ -219,7 +227,7 @@ async def test_project(dut):
     await ClockCycles(dut.clk, 10)
 
     #uart = Uart(dut)
-    wishbone = SPIWishbone(dut)
+    wishbone = SPIWishbone(dut, period=80, period_units="ns")
     accel = Accelerator(wishbone)
 
     await accel.init()

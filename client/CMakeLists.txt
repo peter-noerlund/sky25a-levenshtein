@@ -13,6 +13,7 @@ add_executable(client
     test_set.cpp
     uart_bus.cpp
     verilator_context.cpp
+    verilator_spi_bus.cpp
     verilator_uart.cpp
 )
 target_include_directories(client PRIVATE client)

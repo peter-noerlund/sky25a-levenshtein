@@ -9,7 +9,7 @@
 #include "real_uart.h"
 #include "test_set.h"
 #include "verilator_context.h"
-#include "verilator_uart.h"
+#include "verilator_spi_bus.h"
 
 #include <asio/co_spawn.hpp>
 #include <asio/detached.hpp>
@@ -43,28 +43,29 @@ void Runner::run(const std::optional<std::filesystem::path>& dictionaryPath, std
     
     std::unique_ptr<Context> context;
     std::unique_ptr<Uart> uart;
+    std::unique_ptr<Bus> bus;
     if (m_devicePath)
     {
         context = std::make_unique<RealContext>();
         uart = std::make_unique<RealUart>(ioContext.get_executor(), *m_devicePath);
+        bus = std::make_unique<UartBus>(*uart);
     }
     else
     {
         std::unique_ptr<VerilatorContext> verilatorContext;
         if (m_vcdPath)
         {
-            verilatorContext = std::make_unique<VerilatorContext>(48000000, *m_vcdPath);
+            verilatorContext = std::make_unique<VerilatorContext>(50000000, *m_vcdPath);
         }
         else
         {
-            verilatorContext = std::make_unique<VerilatorContext>(48000000);
+            verilatorContext = std::make_unique<VerilatorContext>(50000000);
         }
-        uart = std::make_unique<VerilatorUart>(*verilatorContext, 16);
+        bus = std::make_unique<VerilatorSpiBus>(*verilatorContext, 4);
         context = std::move(verilatorContext);
     }
 
-    UartBus bus(*uart);
-    Client client(*context, bus);
+    Client client(*context, *bus);
 
     asio::co_spawn(ioContext, run(ioContext, *context, client, dictionaryPath, searchWord, noInit, runRandomizedTest), asio::detached);
 
@@ -102,13 +103,12 @@ asio::awaitable<void> Runner::run(asio::io_context& ioContext, Context& context,
             fmt::println("Running randomized test");
             co_await runTest(client);
         }
-
-        ioContext.stop();
     }
     catch (const std::exception& exception)
     {
         fmt::println(stderr, "Caught exception: {}", exception.what());
     }
+    ioContext.stop();
 }
 
 asio::awaitable<void> Runner::runTest(Client& client)

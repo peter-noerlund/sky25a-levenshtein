@@ -58,9 +58,9 @@ module spi_wishbone_bridge
             buffer <= 32'h00000000;
             cyc <= 1'b0;
         end else begin
-            if (last_sck && !sck) begin
-                case (state)
-                    STATE_COMMAND: begin
+            case (state)
+                STATE_COMMAND:
+                    if (!last_sck && sck) begin
                         buffer <= {buffer[30:0], mosi};
                         if (counter == 5'd31) begin
                             state <= STATE_WISHBONE;
@@ -69,29 +69,26 @@ module spi_wishbone_bridge
                         counter <= counter + 5'd1;
                     end
 
-                    STATE_WISHBONE: begin
-                        if (ack_i || err_i || rty_i) begin
-                            buffer[9] <= 1'b1;
-                            buffer[8] <= ack_i;
-                            buffer[7:0] <= dat_i;
-                            cyc <= 1'b0;
-                            state <= STATE_RESPONSE;
-                        end
+                STATE_WISHBONE:
+                    if (ack_i || err_i || rty_i) begin
+                        buffer[8:0] <= {1'b1, dat_i};
+                        cyc <= 1'b0;
+                        state <= STATE_RESPONSE;
                     end
 
-                    STATE_RESPONSE: begin
-                        miso <= buffer[9];
-                        buffer[9:0] <= {buffer[8:0], 1'b0};
-                        if (counter == 5'd9) begin
+                STATE_RESPONSE:
+                    if (!last_sck && sck) begin
+                        miso <= buffer[8];
+                        buffer[8:1] <= buffer[7:0];
+                        if (counter == 5'd8) begin
                             state <= STATE_DONE;
                         end
                         counter <= counter + 5'd1;
                     end
 
-                    STATE_DONE: begin
-                    end
-                endcase
-            end
+                STATE_DONE: begin
+                end
+            endcase
         end
 
         sck_sync <= {sck_sync[0], spi_sck};

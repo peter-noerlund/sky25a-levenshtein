@@ -5,7 +5,7 @@ project:
   discord:      "pchri03."      # Your discord username, for communication and automatically assigning you a Tapeout role (optional)
   description:  "A levenshtein based fuzzy search engine"      # One line description of what your project does
   language:     "Verilog" # other examples include SystemVerilog, Amaranth, VHDL, etc
-  clock_hz:     48000000 # Clock frequency in Hz (or 0 if not applicable)
+  clock_hz:     50000000 # Clock frequency in Hz (or 0 if not applicable)
 
   # How many tiles your design occupies? A single tile is about 167x108 uM.
   tiles: "1x1"          # Valid values: 1x1, 1x2, 2x2, 3x2, 4x2, 6x2 or 8x2
@@ -20,7 +20,6 @@ project:
     - tt_um_levenshtein.v
     - levenshtein_controller.sv
     - spi_controller.sv
-    #- uart_wishbone_bridge.sv
     - spi_wishbone_bridge.sv
     - wb_arbiter.sv
     - wb_interconnect.sv
@@ -31,10 +30,10 @@ pinout:
   ui[0]: ""
   ui[1]: ""
   ui[2]: ""
-  ui[3]: "UART RxD"
-  ui[4]: ""
-  ui[5]: ""
-  ui[6]: ""
+  ui[3]: ""
+  ui[4]: "SPI SS#"
+  ui[5]: "SPI SCK"
+  ui[6]: "SPI MOSI"
   ui[7]: ""
 
   # Outputs
@@ -42,10 +41,10 @@ pinout:
   uo[1]: ""
   uo[2]: ""
   uo[3]: ""
-  uo[4]: "UART TxD"
+  uo[4]: ""
   uo[5]: ""
   uo[6]: ""
-  uo[7]: ""
+  uo[7]: "SPI MISO"
 
   # Bidirectional pins
   uio[0]: "PMOD SPI SS#"
