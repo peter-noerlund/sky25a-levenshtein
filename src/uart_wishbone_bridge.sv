@@ -40,6 +40,9 @@ module uart_wishbone_bridge
     reg [1:0] byte_counter;
     reg [2:0] bit_counter;
     reg cyc;
+    reg [1:0] rxd_sync;
+
+    wire rxd;
 
     // Data is transmitted little endian
 
@@ -54,6 +57,8 @@ module uart_wishbone_bridge
     assign cyc_o = cyc;
     assign stb_o = cyc;
     assign rxd = uart_rxd_shift[1];
+
+    assign rxd = rxd_sync[1];
 
     always @ (posedge clk_i) begin
         if (rst_i) begin
@@ -167,5 +172,7 @@ module uart_wishbone_bridge
 
             uart_rxd_shift <= {uart_rxd_shift[0], uart_rxd};
         end
+
+        rxd_sync <= {rxd_sync[0], uart_rxd};
     end
 endmodule

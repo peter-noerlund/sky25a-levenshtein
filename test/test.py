@@ -132,13 +132,11 @@ class UARTWishbone(object):
 class Accelerator(object):
     CTRL_ADDR = 0
     DISTANCE_ADDR = 1
-    MASK_ADDR = 2
-    VP_ADDR = 4
-    INDEX_ADDR = 6
-    VECTORMAP_BASE_ADDR = 0x400000
-    DICTIONARY_BASE_ADDR = 0x600000
+    INDEX_ADDR = 2
+    VECTORMAP_BASE_ADDR = 0x000200
+    DICTIONARY_BASE_ADDR = 0x000400
 
-    ENABLE_FLAG = 1
+    ACTIVE_FLAG = 0x80
 
     def __init__(self, bus):
         self._bus = bus
@@ -154,12 +152,12 @@ class Accelerator(object):
             for c in word:
                 await self._bus.write(address, ord(c))
                 address += 1
-            await self._bus.write(address, 0xFE)
+            await self._bus.write(address, 0x00)
             address += 1
-        await self._bus.write(address, 0xFF)
+        await self._bus.write(address, 0x01)
 
     async def search(self, search_word: str):
-        assert (await self._bus.read(self.CTRL_ADDR) & self.ENABLE_FLAG) == 0
+        assert (await self._bus.read(self.CTRL_ADDR) & self.ACTIVE_FLAG) == 0
 
         vector_map = {}
         for c in search_word:
@@ -173,32 +171,18 @@ class Accelerator(object):
             await self._bus.write(self.VECTORMAP_BASE_ADDR + ord(c) * 2, (vector >> 8) & 0xFF)
             await self._bus.write(self.VECTORMAP_BASE_ADDR + ord(c) * 2 + 1, vector & 0xFF)
 
-        mask = 1 << (len(search_word) - 1)
-        await self._bus.write(self.MASK_ADDR, (mask >> 8) & 0xFF)
-        await self._bus.write(self.MASK_ADDR + 1, mask & 0xFF)
+        await self._bus.write(self.CTRL_ADDR, len(search_word))
 
-        vp = (1 << len(search_word)) - 1
-        await self._bus.write(self.VP_ADDR, (vp >> 8) & 0xFF)
-        await self._bus.write(self.VP_ADDR + 1, vp & 0xFF)
-
-        # Verify
-        assert await self._bus.read(self.MASK_ADDR) == (mask >> 8) & 0xFF
-        assert await self._bus.read(self.MASK_ADDR + 1) == mask & 0xFF
-        assert await self._bus.read(self.VP_ADDR) == (vp >> 8) & 0xFF
-        assert await self._bus.read(self.VP_ADDR + 1) == vp & 0xFF
-
-        await self._bus.write(self.CTRL_ADDR, (len(search_word) << 1) | self.ENABLE_FLAG)
-
-        assert (await self._bus.read(self.CTRL_ADDR) & self.ENABLE_FLAG) == self.ENABLE_FLAG
+        assert (await self._bus.read(self.CTRL_ADDR) & self.ACTIVE_FLAG) == self.ACTIVE_FLAG
 
         for i in range(0, 20):
             await Timer(100, units="us")
 
             ctrl = await self._bus.read(self.CTRL_ADDR)
-            if (ctrl & self.ENABLE_FLAG) == 0:
+            if (ctrl & self.ACTIVE_FLAG) == 0:
                 break
 
-        assert (ctrl & self.ENABLE_FLAG) == 0
+        assert (ctrl & self.ACTIVE_FLAG) == 0
 
         for c in vector_map.keys():
             await self._bus.write(self.VECTORMAP_BASE_ADDR + ord(c) * 2, 0x00)

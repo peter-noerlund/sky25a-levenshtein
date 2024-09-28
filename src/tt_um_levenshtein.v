@@ -36,7 +36,7 @@ module tt_um_levenshtein
 
     wire sram_cyc;
     wire sram_stb;
-    wire [21:0] sram_adr;
+    wire [22:0] sram_adr;
     wire [7:0] sram_dwr;
     wire sram_we;
     wire sram_ack;
@@ -50,7 +50,7 @@ module tt_um_levenshtein
 
     wire ctrl_master_cyc;
     wire ctrl_master_stb;
-    wire [21:0] ctrl_master_adr;
+    wire [22:0] ctrl_master_adr;
     wire ctrl_master_we;
     wire [7:0] ctrl_master_dwr;
     wire ctrl_master_ack;
@@ -63,7 +63,7 @@ module tt_um_levenshtein
 
     wire ctrl_slave_cyc;
     wire ctrl_slave_stb;
-    wire [21:0] ctrl_slave_adr;
+    wire [22:0] ctrl_slave_adr;
     wire ctrl_slave_we;
     wire [7:0] ctrl_slave_dwr;
     wire ctrl_slave_ack;
@@ -94,13 +94,13 @@ module tt_um_levenshtein
         .dat_i(spi_drd)
     );
 
-    levenshtein_controller #(.MASTER_ADDR_WIDTH(22), .SLAVE_ADDR_WIDTH(22)) levenshtein_ctrl (
+    levenshtein_controller #(.MASTER_ADDR_WIDTH(23), .SLAVE_ADDR_WIDTH(23)) levenshtein_ctrl (
         .clk_i(clk),
         .rst_i(!rst_n),
 
         .wbm_cyc_o(ctrl_master_cyc),
         .wbm_stb_o(ctrl_master_stb),
-        .wbm_adr_o(ctrl_master_adr[21:0]),
+        .wbm_adr_o(ctrl_master_adr),
         .wbm_we_o(ctrl_master_we),
         .wbm_dat_o(ctrl_master_dwr),
         .wbm_ack_i(ctrl_master_ack),
@@ -130,7 +130,7 @@ module tt_um_levenshtein
         
         .cyc_i(sram_cyc),
         .stb_i(sram_stb),
-        .adr_i({2'b00, sram_adr}),
+        .adr_i({1'b0, sram_adr}),
         .dat_i(sram_dwr),
         .we_i(sram_we),
         .ack_o(sram_ack),
@@ -157,7 +157,7 @@ module tt_um_levenshtein
 
         .wbm1_cyc_i(ctrl_master_cyc),
         .wbm1_stb_i(ctrl_master_stb),
-        .wbm1_adr_i({1'b1, ctrl_master_adr}),
+        .wbm1_adr_i(ctrl_master_adr),
         .wbm1_we_i(ctrl_master_we),
         .wbm1_sel_i(1'b0),
         .wbm1_dat_i(ctrl_master_dwr),

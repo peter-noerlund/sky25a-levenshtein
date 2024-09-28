@@ -15,3 +15,5 @@ test/results.xml
 test/gate_level_netlist.v
 venv
 gds_render*
+datasheet.md
+datasheet.pdf

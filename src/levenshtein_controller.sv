@@ -28,7 +28,9 @@ module levenshtein_controller
         input wire [SLAVE_ADDR_WIDTH - 1 : 0] wbs_adr_i,
         /* verilator lint_on UNUSEDSIGNAL */
         input wire wbs_we_i,
+        /* verilator lint_off UNUSEDSIGNAL */
         input wire [7:0] wbs_dat_i,
+        /* verilator lint_on UNUSEDSIGNAL */
         output reg wbs_ack_o,
         output wire wbs_err_o,
         output wire wbs_rty_o,
@@ -40,26 +42,29 @@ module levenshtein_controller
     localparam DISTANCE_WIDTH = 8;
     localparam ID_WIDTH = 16;
 
-    localparam ADDR_CTRL = 3'd0;
-    localparam ADDR_DISTANCE = 3'd1;
-    localparam ADDR_MASK_HI = 3'd2;
-    localparam ADDR_MASK_LO = 3'd3;
-    localparam ADDR_INITIAL_VP_HI = 3'd4;
-    localparam ADDR_INITIAL_VP_LO = 3'd5;
-    localparam ADDR_IDX_HI = 3'd6;
-    localparam ADDR_IDX_LO = 3'd7;
+    localparam ADDR_CTRL = 2'd0;
+    localparam ADDR_DISTANCE = 2'd1;
+    localparam ADDR_IDX_HI = 2'd2;
+    localparam ADDR_IDX_LO = 2'd3;
+
+    localparam WORD_TERMINATOR = 8'h00;
+    localparam DICT_TERMINATOR = 8'h01;
+
+    localparam DICT_ADDR = 'h400;
 
     reg enabled;
     reg [4:0] word_length;
-    reg [BITVECTOR_WIDTH - 1 : 0] mask;
-    reg [BITVECTOR_WIDTH - 1 : 0] initial_vp;
+    wire [BITVECTOR_WIDTH - 1 : 0] mask;
+    wire [BITVECTOR_WIDTH - 1 : 0] initial_vp;
+    wire [4:0] next_word_length;
+    wire [BITVECTOR_WIDTH - 1 : 0] next_initial_vp;
 
     localparam STATE_READ_DICT = 2'd0;
     localparam STATE_READ_VECTOR_HI = 2'd1;
     localparam STATE_READ_VECTOR_LO = 2'd2;
     localparam STATE_LEVENSHTEIN = 2'd3;
 
-    localparam DICT_ADDR_WIDTH = MASTER_ADDR_WIDTH - 1;
+    localparam DICT_ADDR_WIDTH = MASTER_ADDR_WIDTH;
 
     reg [1:0] state;
     reg [DICT_ADDR_WIDTH - 1 : 0] dict_address;
@@ -81,8 +86,8 @@ module levenshtein_controller
     assign wbm_cyc_o = cyc;
     assign wbm_stb_o = cyc;
     assign wbm_adr_o =
-        (state == STATE_READ_DICT ? {1'b1, dict_address} :
-        (state == STATE_READ_VECTOR_HI ? MASTER_ADDR_WIDTH'({pm[7:0], 1'b0}) :  MASTER_ADDR_WIDTH'({pm[7:0], 1'b1})));
+        (state == STATE_READ_DICT ? dict_address :
+        (state == STATE_READ_VECTOR_HI ? MASTER_ADDR_WIDTH'({1'b1, pm[7:0], 1'b0}) :  MASTER_ADDR_WIDTH'({1'b1, pm[7:0], 1'b1})));
     assign wbm_we_o = 1'b0;
     assign wbm_dat_o = 8'h00;
 
@@ -90,14 +95,15 @@ module levenshtein_controller
     assign hp = vn | ~(d0 | vp);
     assign hn = d0 & vp;
 
+    assign next_word_length = wbs_dat_i[4:0];
+    assign next_initial_vp = (1 << next_word_length) - 1;
+    assign initial_vp = (1 << word_length) - 1;
+    assign mask = 1 << (word_length - 1);
+
     always_comb begin
-        case (wbs_adr_i[2:0])
-            ADDR_CTRL: wbs_dat_o = {2'b00, word_length, enabled};
+        case (wbs_adr_i[1:0])
+            ADDR_CTRL: wbs_dat_o = {enabled, 2'b00, word_length};
             ADDR_DISTANCE: wbs_dat_o = best_distance;
-            ADDR_MASK_HI: wbs_dat_o = mask[15:8];
-            ADDR_MASK_LO: wbs_dat_o = mask[7:0];
-            ADDR_INITIAL_VP_HI: wbs_dat_o = initial_vp[15:8];
-            ADDR_INITIAL_VP_LO: wbs_dat_o = initial_vp[7:0];
             ADDR_IDX_HI: wbs_dat_o = best_idx[15:8];
             ADDR_IDX_LO: wbs_dat_o = best_idx[7:0];
         endcase
@@ -110,7 +116,7 @@ module levenshtein_controller
 
             cyc <= 1'b0;
 
-            dict_address <= DICT_ADDR_WIDTH'(0);
+            dict_address <= DICT_ADDR_WIDTH'(DICT_ADDR);
             d <= DISTANCE_WIDTH'(0);
             vp <= BITVECTOR_WIDTH'(0);
             vn <= BITVECTOR_WIDTH'(0);
@@ -121,32 +127,22 @@ module levenshtein_controller
             best_distance <= DISTANCE_WIDTH'(-1);
 
             word_length <= 5'd0;
-            mask <= 16'h0000;
-            initial_vp <= 16'h0000;
         end else begin
             if (wbs_cyc_i && wbs_stb_i && !wbs_ack_o) begin
                 if (wbs_we_i) begin
-                    if (wbs_adr_i[2:0] == ADDR_CTRL) begin
-                        enabled <= wbs_dat_i[0];
-                        word_length <= wbs_dat_i[5:1];
+                    if (wbs_adr_i[1:0] == ADDR_CTRL) begin
+                        enabled <= 1'b1;
+                        word_length <= next_word_length;
 
-                        dict_address <= DICT_ADDR_WIDTH'(0);
-                        d <= DISTANCE_WIDTH'(wbs_dat_i[5:1]);
+                        dict_address <= DICT_ADDR_WIDTH'(DICT_ADDR);
+                        d <= DISTANCE_WIDTH'(next_word_length);
                         vn <= BITVECTOR_WIDTH'(0);
-                        vp <= initial_vp;
+                        vp <= next_initial_vp;
                         state <= STATE_READ_DICT;
 
                         idx <= ID_WIDTH'(0);
                         best_idx <= ID_WIDTH'(0);
                         best_distance <= DISTANCE_WIDTH'(-1);
-                    end else if (wbs_adr_i[2:0] == ADDR_MASK_HI) begin
-                        mask[15:8] <= wbs_dat_i;
-                    end else if (wbs_adr_i[2:0] == ADDR_MASK_LO) begin
-                        mask[7:0] <= wbs_dat_i;
-                    end else if (wbs_adr_i[2:0] == ADDR_INITIAL_VP_HI) begin
-                        initial_vp[15:8] <= wbs_dat_i;
-                    end else if (wbs_adr_i[2:0] == ADDR_INITIAL_VP_LO) begin
-                        initial_vp[7:0] <= wbs_dat_i;
                     end
                 end
                 wbs_ack_o <= 1'b1;
@@ -161,7 +157,7 @@ module levenshtein_controller
                             cyc <= 1'b1;
                         end else if (wbm_ack_i) begin
                             pm[7:0] <= wbm_dat_i;
-                            if (wbm_dat_i == 8'hFE) begin
+                            if (wbm_dat_i == WORD_TERMINATOR) begin
                                 if (d < best_distance) begin
                                     best_idx <= idx;
                                     best_distance <= d;
@@ -171,7 +167,7 @@ module levenshtein_controller
                                 vn <= BITVECTOR_WIDTH'(0);
                                 vp <= initial_vp;
                                 state <= STATE_READ_DICT;
-                            end else if (wbm_dat_i == 8'hFF) begin
+                            end else if (wbm_dat_i == DICT_TERMINATOR) begin
                                 enabled <= 1'b0;
                             end else begin
                                 state <= STATE_READ_VECTOR_HI;

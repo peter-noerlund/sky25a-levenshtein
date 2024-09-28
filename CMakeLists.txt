@@ -45,6 +45,13 @@ add_custom_target(
 )
 
 add_custom_target(
+    create-pdf
+    COMMAND . venv/bin/activate && tt/tt_tool.py --create-pdf
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tt/tt_tool.py ${CMAKE_CURRENT_SOURCE_DIR}/venv/bin/python
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+add_custom_target(
     test
     COMMAND . ../venv/bin/activate && make -B
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tt/tt_tool.py ${CMAKE_CURRENT_SOURCE_DIR}/venv/bin/python

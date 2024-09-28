@@ -51,24 +51,22 @@ public:
 private:
     enum ControlFlags : std::uint8_t
     {
-        EnableFlag = 0x01
+        ActiveFlag = 0x80
     };
 
     enum Address : std::uint32_t
     {
         ControlAddress = 0x0000000,
         DistanceAddress = 0x0000001,
-        MaskAddress = 0x000002,
-        VpAddress = 0x000004,
-        IndexAddress = 0x0000006,
-        BaseBitvectorAddress = 0x400000,
-        BaseDictionaryAddress = 0x600000
+        IndexAddress = 0x0000002,
+        BaseBitvectorAddress = 0x000200,
+        BaseDictionaryAddress = 0x000400
     };
 
     enum SpecialChars : std::uint8_t
     {
-        WordTerminator = 0xFE,
-        ListTerminator = 0xFF
+        WordTerminator = 0x00,
+        ListTerminator = 0x01
     };
 
     asio::awaitable<void> writeByte(std::uint32_t address, std::uint8_t value);
