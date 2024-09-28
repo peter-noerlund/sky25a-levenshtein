@@ -17,7 +17,13 @@ class Client;
 class Runner
 {
 public:
-    void setDevicePath(const std::filesystem::path& devicePath);
+    enum class Device
+    {
+        Verilator,
+        Icestick
+    };
+
+    explicit Runner(Device device);
     void setVcdPath(const std::filesystem::path& vcdPath);
     
     void run(const std::optional<std::filesystem::path>& dictionaryPath, std::string_view searchWord, bool noInit, bool runRandomizedTest);
@@ -27,7 +33,7 @@ private:
     asio::awaitable<void> loadDictionary(Client& client, const std::filesystem::path& path);
     asio::awaitable<void> runTest(Client& client);
 
-    std::optional<std::filesystem::path> m_devicePath;
+    Device m_device;
     std::optional<std::filesystem::path> m_vcdPath;
 };
 

@@ -14,41 +14,8 @@ VerilatorSpiBus::VerilatorSpiBus(VerilatorContext& context, unsigned int clockDi
     m_context.top().spi_ss_n = 1;
 }
 
-asio::awaitable<void> VerilatorSpiBus::read(std::uint32_t address, std::span<std::byte> buffer)
+asio::awaitable<std::byte> VerilatorSpiBus::execute(std::uint32_t command)
 {
-    for (auto& b : buffer)
-    {
-        b = co_await read(address++);
-    }
-}
-
-asio::awaitable<std::byte> VerilatorSpiBus::read(std::uint32_t address)
-{
-    co_return co_await execute(Operation::Read, address);
-}
-
-asio::awaitable<void> VerilatorSpiBus::write(std::uint32_t address, std::span<const std::byte> data)
-{
-    for (auto b : data)
-    {
-        co_await write(address++, b);
-    }
-}
-
-asio::awaitable<void> VerilatorSpiBus::write(std::uint32_t address, std::byte value)
-{
-    co_await execute(Operation::Write, address, value);
-}
-
-asio::awaitable<std::byte> VerilatorSpiBus::execute(Operation operation, std::uint32_t address, std::byte value)
-{
-    if (address > 0x7FFFFF)
-    {
-        throw std::invalid_argument("Address out of range");
-    }
-
-    std::uint32_t command = (operation == Operation::Write ? 0x80000000 : 0) | (address << 8) | std::to_integer<std::uint8_t>(value);
-
     auto lowClocks = m_clockDivider / 2;
     auto highClocks = m_clockDivider - lowClocks;
 

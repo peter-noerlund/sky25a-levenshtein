@@ -2,11 +2,9 @@
 
 #include "client.h"
 #include "context.h"
+#include "icestick_spi_bus.h"
 #include "levenshtein.h"
-#include "uart.h"
-#include "uart_bus.h"
 #include "real_context.h"
-#include "real_uart.h"
 #include "test_set.h"
 #include "verilator_context.h"
 #include "verilator_spi_bus.h"
@@ -27,9 +25,9 @@
 namespace tt09_levenshtein
 {
 
-void Runner::setDevicePath(const std::filesystem::path& devicePath)
+Runner::Runner(Device device)
+    : m_device(device)
 {
-    m_devicePath = devicePath;
 }
 
 void Runner::setVcdPath(const std::filesystem::path& vcdPath)
@@ -42,28 +40,32 @@ void Runner::run(const std::optional<std::filesystem::path>& dictionaryPath, std
     asio::io_context ioContext;
     
     std::unique_ptr<Context> context;
-    std::unique_ptr<Uart> uart;
     std::unique_ptr<Bus> bus;
-    if (m_devicePath)
+
+    switch (m_device)
     {
-        context = std::make_unique<RealContext>();
-        uart = std::make_unique<RealUart>(ioContext.get_executor(), *m_devicePath);
-        bus = std::make_unique<UartBus>(*uart);
-    }
-    else
-    {
-        std::unique_ptr<VerilatorContext> verilatorContext;
-        if (m_vcdPath)
+        case Device::Verilator:
         {
-            verilatorContext = std::make_unique<VerilatorContext>(50000000, *m_vcdPath);
+            std::unique_ptr<VerilatorContext> verilatorContext;
+            if (m_vcdPath)
+            {
+                verilatorContext = std::make_unique<VerilatorContext>(50000000, *m_vcdPath);
+            }
+            else
+            {
+                verilatorContext = std::make_unique<VerilatorContext>(50000000);
+            }
+            bus = std::make_unique<VerilatorSpiBus>(*verilatorContext);
+            context = std::move(verilatorContext);
+            break;
         }
-        else
-        {
-            verilatorContext = std::make_unique<VerilatorContext>(50000000);
-        }
-        bus = std::make_unique<VerilatorSpiBus>(*verilatorContext, 4);
-        context = std::move(verilatorContext);
+
+        case Device::Icestick:
+            context = std::make_unique<RealContext>();
+            bus = std::make_unique<IcestickSpiBus>(*context);
+            break;
     }
+
 
     Client client(*context, *bus);
 

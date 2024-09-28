@@ -14,13 +14,13 @@ int main(int argc, char** argv)
     bool showHelp = false;
     bool noInit = false;
     bool runRandomizedTest = false;
-    std::optional<std::filesystem::path> devicePath;
+    std::string device = "verilog";
     std::optional<std::filesystem::path> vcdPath;
     std::optional<std::filesystem::path> dictionaryPath;
     std::string searchWord;
 
     auto cli = lyra::cli()
-        | lyra::opt(devicePath, "DEVICE")["-d"]["--device"]("Use device instead of verilog")
+        | lyra::opt(device, "DEVICE")["-d"]["--device"]("Device type").choices("verilog", "icestick")
         | lyra::opt(vcdPath, "FILE")["-v"]["--vcd-file"]("Create VCD file")
         | lyra::opt(noInit)["--no-init"]("Skip initialization")
         | lyra::opt(dictionaryPath, "FILE")["-l"]["--load-dictionary"]("Load dictionary")
@@ -40,11 +40,7 @@ int main(int argc, char** argv)
         return EXIT_SUCCESS;
     }
 
-    tt09_levenshtein::Runner runner;
-    if (devicePath)
-    {
-        runner.setDevicePath(*devicePath);
-    }
+    tt09_levenshtein::Runner runner(device == "icestick" ? tt09_levenshtein::Runner::Device::Icestick : tt09_levenshtein::Runner::Device::Verilator);
     if (vcdPath)
     {
         runner.setVcdPath(*vcdPath);
