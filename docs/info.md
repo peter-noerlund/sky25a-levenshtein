@@ -13,11 +13,11 @@ tt09-levenshtein is a fuzzy search engine which can find the best matching word 
 
 Fundamentally its an implementation of the bit-vector levenshtein algorithm from Heikki Hyyrö's 2022 paper with the title *A Bit-Vector Algorithm for Computing Levenshtein and Damerau Edit Distances*.
 
-### UART
+### SPI
 
-The device is organized as a wishbone bus which is accessed through commands on the UART.
+The device is organized as a wishbone bus which is accessed through commands on an SPI bus.
 
-Each command consists of 4 input bytes and 1 output byte:
+The maximum SPI frequency is 25% of the master clock.
 
 **Input bytes:**
 
@@ -31,14 +31,30 @@ Each command consists of 4 input bytes and 1 output byte:
 
 **Output bytes:**
 
+Since the SPI bridges to a wishbone bus which is shared by another master and because register and SRAM have different latencies, the response time is variable.
+
+While the bus is working, the output bits will be zero. The final output byte will be preceeded by a one-bit.
+
+Note that this means that the value `0x5A` can appear 8 different ways on the SPI bus:
+
+```
+01 5A   0000000 1 01011010
+02 B4   000000 1 01011010 0
+05 68   00000 1 01011010 00
+0A D0   0000 1 01011010 000
+15 A0   000 1 01011010 0000
+2B 40   00 1 01011010 00000
+56 80   0 1 01011010 000000
+AD 00   1 01011010 00000000
+```
+
 | Byte | Bit | Description                              |
 |------|-----|------------------------------------------|
 | 0    | 7-0 | Byte read if READ, otherwise just `0x00` |
 
-
 ### Memory Layout
 
-As indicated by the UART protocol, the address space is 23 bits.
+As indicated by the SPI protocol, the address space is 23 bits.
 
 The address space is basically as follows:
 

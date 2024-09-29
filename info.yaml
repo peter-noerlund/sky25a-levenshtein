@@ -47,10 +47,10 @@ pinout:
   uo[7]: "SPI MISO"
 
   # Bidirectional pins
-  uio[0]: "PMOD SPI SS#"
-  uio[1]: "PMOD SPI MOSI"
-  uio[2]: "PMOD SPI MISO"
-  uio[3]: "PMOD SPI SCK"
+  uio[0]: "SRAM SPI SS#"
+  uio[1]: "SRAM SPI MOSI"
+  uio[2]: "SRAM SPI MISO"
+  uio[3]: "SRAM SPI SCK"
   uio[4]: ""
   uio[5]: ""
   uio[6]: ""
