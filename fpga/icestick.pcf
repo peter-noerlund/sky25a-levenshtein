@@ -4,8 +4,8 @@
 #set_io --warn-no-port USB_DCD_GPIOL3 1          #IOL_1A (DPIO)
 #set_io --warn-no-port USB_DSR_GPIOL2 2          #IOL_1B (DPIO)
 #set_io --warn-no-port USB_DTR_GPIOL1 3          #IOL_2A (DPIO)
-#set_io --warn-no-port USB_CTS_SS 4              #IOL_2B (DPIO)
-#set_io --warn-no-port USB_RTS_MISO 7            #IOL_3A (DPIO)
+set_io --warn-no-port USB_CTS_SS 4              #IOL_2B (DPIO)
+set_io --warn-no-port USB_RTS_MISO 7            #IOL_3A (DPIO)
 set_io --warn-no-port USB_RXD_MOSI 8            #IOL_3B (DPIO)
 set_io --warn-no-port USB_TXD_SCK 9             #IOL_4A (DPIO)
 

@@ -13,8 +13,9 @@ public:
     explicit VerilatorSpiBus(VerilatorContext& context, unsigned int clockDivider = 4) noexcept;
 
 protected:
-    asio::awaitable<std::byte> execute(std::uint32_t command);
+    asio::awaitable<std::byte> execute(std::uint32_t command) override;
     
+private:
     VerilatorContext& m_context;
     unsigned int m_clockDivider;
 };

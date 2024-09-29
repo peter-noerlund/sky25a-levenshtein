@@ -12,8 +12,9 @@ public:
     UartBus(Uart& uart) noexcept;
 
 protected:
-    asio::awaitable<std::byte> execute(std::uint32_t command);
+    asio::awaitable<std::byte> execute(std::uint32_t command) override;
 
+private:
     Uart& m_uart;
 };
 

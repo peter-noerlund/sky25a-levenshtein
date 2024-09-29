@@ -3,8 +3,12 @@
 module top
     (
         input  wire ICE_CLK,
-        output wire USB_RXD_MOSI,
+        
         input wire USB_TXD_SCK,
+        input wire USB_RXD_MOSI,
+        output wire USB_RTS_MISO,
+        input wire USB_CTS_SS,
+
         inout wire [7:0] PMOD,
         output wire LED4
     );
@@ -18,9 +22,13 @@ module top
     wire [7:0] uio_out;
     wire [7:0] uio_oe;
 
-    assign ui_in[3] = USB_TXD_SCK;
-    assign USB_RXD_MOSI = uo_out[4];
+    assign ui_in[4] = USB_CTS_SS;
+    assign ui_in[5] = USB_TXD_SCK;
+    assign ui_in[6] = USB_RXD_MOSI;
+    assign USB_RTS_MISO = uo_out[7];
+
     assign rst_n = clk_locked;
+
     assign LED4 = clk_locked;
 
     pll pll(
