@@ -16,7 +16,7 @@ public:
 
 public:
     asio::awaitable<void> enable() override;
-    asio::awaitable<void> xmit(std::span<std::byte> buffer) override;
+    asio::awaitable<void> xmit(std::span<const std::byte> data, std::span<std::byte> buffer) override;
     asio::awaitable<void> disable() override;
 
 private:

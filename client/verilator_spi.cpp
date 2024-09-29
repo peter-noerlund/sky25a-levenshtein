@@ -27,7 +27,7 @@ asio::awaitable<void> VerilatorSpi::disable()
     co_await m_context.clocks(m_clockDivider);
 }
 
-asio::awaitable<void> VerilatorSpi::xmit(std::span<std::byte> buffer)
+asio::awaitable<void> VerilatorSpi::xmit(std::span<const std::byte> data, std::span<std::byte> buffer)
 {
     if (m_context.top().spi_ss_n)
     {
@@ -41,16 +41,28 @@ asio::awaitable<void> VerilatorSpi::xmit(std::span<std::byte> buffer)
     auto& mosi = m_context.top().spi_mosi;
     const auto& miso = m_context.top().spi_miso;
 
-    for (auto& b : buffer)
+    for (auto b : data)
     {
         auto valueOut = std::to_integer<std::uint8_t>(b);
-        std::uint8_t valueIn = 0;
 
         for (unsigned int i = 0; i != 8; ++i)
         {
             sck = 0;
             mosi = valueOut >> 7;
             valueOut <<= 1;
+            co_await m_context.clocks(lowClocks);
+            
+            sck = 1;
+            co_await m_context.clocks(highClocks);
+        }
+    }
+
+    for (auto& b : buffer)
+    {
+        std::uint8_t valueIn = 0;
+        for (unsigned int i = 0; i != 8; ++i)
+        {
+            sck = 0;
             co_await m_context.clocks(lowClocks);
             
             valueIn = (valueIn << 1) | (miso ? 1 : 0);

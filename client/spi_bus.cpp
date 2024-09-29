@@ -30,44 +30,23 @@ asio::awaitable<std::byte> SpiBus::execute(std::uint32_t command)
     std::byte response = {};
     try
     {
-        std::array<std::byte, 4> buffer = {
+        std::array<std::byte, 4> data = {
             static_cast<std::byte>(command >> 24),
             static_cast<std::byte>(command >> 16),
             static_cast<std::byte>(command >> 8),
             static_cast<std::byte>(command),
         };
+        std::array<std::byte, 4> buffer;
 
 #ifdef SPI_BUS_DEBUG
         fmt::print("\033[33m{:02x} {:02x} {:02x} {:02x}\033[0m", std::to_integer<std::uint8_t>(buffer[0]), std::to_integer<std::uint8_t>(buffer[1]), std::to_integer<std::uint8_t>(buffer[2]), std::to_integer<std::uint8_t>(buffer[3]));
 #endif // SPI_BUS_DEBUG
 
-        co_await m_spi.xmit(buffer);
-
-        for (auto b : buffer)
-        {
-            auto v = std::to_integer<std::uint8_t>(b);
-#ifdef SPI_BUS_DEBUG
-            if (v == 0)
-            {
-                fmt::print("\033[34m 00\033[0m");
-            }
-            else
-            {
-                fmt::println("\033[31m {:02x}\033[0m", v);
-            }
-#endif // SPI_BUS_DEBUG
-            if (v != 0)
-            {
-                throw std::runtime_error(fmt::format("Bad SPI data during command: {:02x} {:02x} {:02x} {:02x}", std::to_integer<std::uint8_t>(buffer[0]), std::to_integer<std::uint8_t>(buffer[1]), std::to_integer<std::uint8_t>(buffer[2]), std::to_integer<std::uint8_t>(buffer[3])).c_str());
-            }
-        }
+        co_await m_spi.xmit(data, buffer);
 
         auto syncIt = buffer.end();
         for (unsigned int retries = 0; retries != 256; ++retries)
         {
-            std::fill(buffer.begin(), buffer.end(), std::byte(0));
-            co_await m_spi.xmit(buffer);
-
             for (auto it = buffer.begin(); it != buffer.end(); ++it)
             {
                 auto value = std::to_integer<std::uint8_t>(*it);
@@ -88,6 +67,11 @@ asio::awaitable<std::byte> SpiBus::execute(std::uint32_t command)
             {
                 break;
             }
+
+            if (retries < 255)
+            {
+                co_await m_spi.xmit({}, buffer);
+            }
         }
 
         if (syncIt == buffer.end())
@@ -98,7 +82,7 @@ asio::awaitable<std::byte> SpiBus::execute(std::uint32_t command)
         std::uint16_t value = static_cast<std::uint16_t>(std::to_integer<std::uint8_t>(*syncIt++)) << 8;
         if (syncIt == buffer.end())
         {
-            co_await m_spi.xmit(std::span(buffer).subspan(0, 1));
+            co_await m_spi.xmit({}, std::span(buffer).subspan(0, 1));
             syncIt = buffer.begin();
         }
 

@@ -77,20 +77,35 @@ asio::awaitable<void> IcestickSpi::setSS(bool high)
     co_return;
 }
 
-asio::awaitable<void> IcestickSpi::xmit(std::span<std::byte> buffer)
+asio::awaitable<void> IcestickSpi::xmit(std::span<const std::byte> data, std::span<std::byte> buffer)
 {
-    std::vector<std::uint8_t> commands({
-        MPSSE_DO_WRITE | MPSSE_WRITE_NEG | MPSSE_DO_READ,
-        static_cast<std::uint8_t>(buffer.size() - 1), static_cast<std::uint8_t>((buffer.size() - 1) >> 8)
-    });
-    commands.reserve(commands.size() + buffer.size() + 1);
-    for (auto b : buffer)
+    std::vector<std::uint8_t> commands;
+    commands.reserve(7 + data.size() + buffer.size());
+
+    if (!data.empty())
     {
-        commands.push_back(static_cast<std::uint8_t>(b));
+        commands.push_back(MPSSE_DO_WRITE | MPSSE_WRITE_NEG);
+        commands.push_back(static_cast<std::uint8_t>(data.size() - 1));
+        commands.push_back(static_cast<std::uint8_t>((data.size() - 1) >> 8));
+        for (auto b : data)
+        {
+            commands.push_back(static_cast<std::uint8_t>(b));
+        }
+    }
+
+    if (!buffer.empty())
+    {
+        commands.push_back(MPSSE_DO_READ);
+        commands.push_back(static_cast<std::uint8_t>(buffer.size() - 1));
+        commands.push_back(static_cast<std::uint8_t>((buffer.size() - 1) >> 8));
+        commands.push_back(SEND_IMMEDIATE);
     }
 
     send(commands);
-    recv(buffer);
+    if (!buffer.empty())
+    {
+        recv(buffer);
+    }
 
     co_return;
 }

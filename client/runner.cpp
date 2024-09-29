@@ -123,10 +123,10 @@ asio::awaitable<void> Runner::runTest(Client& client)
     testConfig.maxChar = 'f';
     testConfig.minDictionaryWordLength = 1;
     testConfig.maxDictionaryWordLength = 32;
-    testConfig.dictionaryWordCount = 256;
+    testConfig.dictionaryWordCount = 1024;
     testConfig.minSearchWordLength = 1;
     testConfig.maxSearchWordLength = 16;
-    testConfig.searchWordCount = 32;
+    testConfig.searchWordCount = 256;
 
     TestSet testSet(testConfig);
 
