@@ -3,9 +3,11 @@
 #include "bus.h"
 
 #include <asio/awaitable.hpp>
+#include <fmt/format.h>
 
 #include <cstddef>
 #include <cstdint>
+#include <stdexcept>
 #include <span>
 #include <string_view>
 
@@ -44,6 +46,39 @@ public:
         }
         
         co_await m_bus.write(address, std::as_bytes(std::span(listTerminator)));
+    }
+
+    template<typename Container>
+    asio::awaitable<void> verifyDictionary(Container&& container)
+    {
+        std::vector<std::uint8_t> buffer;
+
+        std::uint32_t address = BaseDictionaryAddress;
+        for (const auto& word : container)
+        {
+            buffer.resize(word.size() + 1);
+            co_await m_bus.read(address, std::as_writable_bytes(std::span(buffer)));
+            for (std::size_t i = 0; i != word.size(); ++i)
+            {
+                if (buffer[i] != static_cast<std::uint8_t>(word[i]))
+                {
+                    throw std::runtime_error(fmt::format("Mismatch at address 0x{:06x}. Read {:02x}, expected {:02x}", address + i, buffer[i], static_cast<std::uint8_t>(word[i])).c_str());
+                }
+            }
+            if (buffer.back() != WordTerminator)
+            {
+                throw std::runtime_error(fmt::format("Mismatch at address 0x{:06x}. Read {:02x}, expected {:02x}", address + word.size(), buffer.back(), static_cast<std::uint8_t>(WordTerminator)).c_str());
+            }
+            
+            address += word.size() + 1;
+        }
+
+        buffer.resize(1);
+        co_await m_bus.read(address, std::as_writable_bytes(std::span(buffer)));
+        if (buffer.front() != ListTerminator)
+        {
+            throw std::runtime_error(fmt::format("Mismatch at address 0x{:06x}. Read {:02x}, expected {:02x}", address, buffer.front(), static_cast<std::uint8_t>(WordTerminator)).c_str());
+        }
     }
 
     asio::awaitable<Result> search(std::string_view word);

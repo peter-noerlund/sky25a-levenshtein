@@ -24,7 +24,6 @@ module spi_wishbone_bridge
     localparam STATE_COMMAND = 2'd0;
     localparam STATE_WISHBONE = 2'd1;
     localparam STATE_RESPONSE = 2'd2;
-    localparam STATE_DONE = 2'd3;
 
     reg [1:0] sck_sync;
     reg [1:0] mosi_sync;
@@ -66,29 +65,26 @@ module spi_wishbone_bridge
                             state <= STATE_WISHBONE;
                             cyc <= 1'b1;
                         end
-                        counter <= counter + 5'd1;
                     end
 
-                STATE_WISHBONE:
+                STATE_WISHBONE: begin
                     if (ack_i || err_i || rty_i) begin
                         buffer[8:0] <= {1'b1, dat_i};
                         cyc <= 1'b0;
                         state <= STATE_RESPONSE;
                     end
+                end
 
-                STATE_RESPONSE:
+                default:
                     if (!last_sck && sck) begin
                         miso <= buffer[8];
-                        buffer[8:1] <= buffer[7:0];
-                        if (counter == 5'd8) begin
-                            state <= STATE_DONE;
-                        end
-                        counter <= counter + 5'd1;
+                        buffer[8:0] <= {buffer[7:0], 1'b0};
                     end
-
-                STATE_DONE: begin
-                end
             endcase
+
+            if (!last_sck && sck) begin
+                counter <= counter + 5'd1;
+            end
         end
 
         sck_sync <= {sck_sync[0], spi_sck};

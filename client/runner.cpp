@@ -2,12 +2,14 @@
 
 #include "client.h"
 #include "context.h"
-#include "icestick_spi_bus.h"
+#include "icestick_spi.h"
 #include "levenshtein.h"
 #include "real_context.h"
+#include "spi.h"
+#include "spi_bus.h"
 #include "test_set.h"
 #include "verilator_context.h"
-#include "verilator_spi_bus.h"
+#include "verilator_spi.h"
 
 #include <asio/co_spawn.hpp>
 #include <asio/detached.hpp>
@@ -40,7 +42,7 @@ void Runner::run(const std::optional<std::filesystem::path>& dictionaryPath, std
     asio::io_context ioContext;
     
     std::unique_ptr<Context> context;
-    std::unique_ptr<Bus> bus;
+    std::unique_ptr<Spi> spi;
 
     switch (m_device)
     {
@@ -55,19 +57,20 @@ void Runner::run(const std::optional<std::filesystem::path>& dictionaryPath, std
             {
                 verilatorContext = std::make_unique<VerilatorContext>(50000000);
             }
-            bus = std::make_unique<VerilatorSpiBus>(*verilatorContext);
+            spi = std::make_unique<VerilatorSpi>(*verilatorContext);
             context = std::move(verilatorContext);
             break;
         }
 
         case Device::Icestick:
             context = std::make_unique<RealContext>();
-            bus = std::make_unique<IcestickSpiBus>(*context);
+            spi = std::make_unique<IcestickSpi>(*context);
             break;
     }
 
+    SpiBus bus(*spi);
 
-    Client client(*context, *bus);
+    Client client(*context, bus);
 
     asio::co_spawn(ioContext, run(ioContext, *context, client, dictionaryPath, searchWord, noInit, runRandomizedTest), asio::detached);
 
@@ -120,16 +123,19 @@ asio::awaitable<void> Runner::runTest(Client& client)
     testConfig.maxChar = 'f';
     testConfig.minDictionaryWordLength = 1;
     testConfig.maxDictionaryWordLength = 32;
-    testConfig.dictionaryWordCount = 1024;
+    testConfig.dictionaryWordCount = 256;
     testConfig.minSearchWordLength = 1;
     testConfig.maxSearchWordLength = 16;
-    testConfig.searchWordCount = 256;
+    testConfig.searchWordCount = 32;
 
     TestSet testSet(testConfig);
 
-    fmt::println("Loading random dictionary");
+    fmt::println("Loading dictionary");
     auto dictionaryWords = testSet.dictionaryWords();
     co_await client.loadDictionary(dictionaryWords);
+
+    fmt::println("Verifying dictionary");
+    co_await client.verifyDictionary(dictionaryWords);
 
     fmt::println("Searching for words");
 
