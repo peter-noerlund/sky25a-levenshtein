@@ -113,7 +113,7 @@ class SPIWishbone(object):
 
             value = (value << 1) | (1 if self._dut.uo_out[7] == 1 else 0)
 
-        self._dut.ui_in = (self._dut.ui_in.value & self.UI_IN_MASK) | self.SS_N
+        self._dut.ui_in.value = (self._dut.ui_in.value & self.UI_IN_MASK) | self.SS_N
         await Timer(self._half_period, units=self._half_period_units)
 
         return value
