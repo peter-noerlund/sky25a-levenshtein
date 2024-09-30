@@ -31,6 +31,10 @@ The maximum SPI frequency is 25% of the master clock.
 
 **Output bytes:**
 
+| Byte | Bit | Description                              |
+|------|-----|------------------------------------------|
+| 0    | 7-0 | Byte read if READ, otherwise just `0x00` |
+
 Since the SPI bridges to a wishbone bus which is shared by another master and because register and SRAM have different latencies, the response time is variable.
 
 While the bus is working, the output bits will be zero. The final output byte will be preceeded by a one-bit.
@@ -48,9 +52,6 @@ Note that this means that the value `0x5A` can appear 8 different ways on the SP
 AD 00   1 01011010 00000000
 ```
 
-| Byte | Bit | Description                              |
-|------|-----|------------------------------------------|
-| 0    | 7-0 | Byte read if READ, otherwise just `0x00` |
 
 ### Memory Layout
 
