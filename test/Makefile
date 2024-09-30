@@ -5,7 +5,7 @@
 SIM ?= icarus
 TOPLEVEL_LANG ?= verilog
 SRC_DIR = $(PWD)/../src
-PROJECT_SOURCES = tt_um_levenshtein.v levenshtein_controller.sv spi_controller.sv spi_wishbone_bridge.sv uart_wishbone_bridge.sv wb_arbiter.sv wb_interconnect.sv
+PROJECT_SOURCES = tt_um_pchri03_levenshtein.v levenshtein_controller.sv spi_controller.sv spi_wishbone_bridge.sv uart_wishbone_bridge.sv wb_arbiter.sv wb_interconnect.sv
 
 ifneq ($(GATES),yes)
 
