@@ -18,13 +18,27 @@ module spi_controller
         output reg sck,
         output reg mosi,
         input wire miso,
-        output reg ss_n
+        
+        output wire cs_n,
+        output wire cs2_n,
+        output wire cs3_n,
+
+        input wire [1:0] sram_config
     );
+
+    localparam CONFIG_CS = 2'd1;
+    localparam CONFIG_CS2 = 2'd2;
+    localparam CONFIG_CS3 = 2'd3;
+
+    reg ss_n;
+    reg [5:0] bit_counter;
 
     assign err_o = 1'b0;
     assign rty_o = 1'b0;
 
-    reg [5:0] bit_counter;
+    assign cs_n = sram_config == CONFIG_CS ? ss_n : 1'b1;
+    assign cs2_n = sram_config == CONFIG_CS2 ? ss_n : 1'b1;
+    assign cs3_n = sram_config == CONFIG_CS3 ? ss_n : 1'b1;
 
     always @ (posedge clk_i) begin
         if (rst_i) begin

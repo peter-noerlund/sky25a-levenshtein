@@ -20,9 +20,9 @@ module tt_um_levenshtein
     /* verilator lint_on UNUSEDSIGNAL */
 
     assign uo_out[6:0] = 7'b0000000;
-    assign uio_oe = 8'b00001011;
+    assign uio_oe = 8'b11001011;
     assign uio_out[2] = 1'b0;
-    assign uio_out[7:4] = 4'b0000;
+    assign uio_out[5:4] = 2'b00;
 
     wire spi_cyc;
     wire spi_stb;
@@ -43,6 +43,8 @@ module tt_um_levenshtein
     wire sram_err;
     wire sram_rty;
     wire [7:0] sram_drd;
+
+    wire [1:0] sram_config;
 
     /* verilator lint_off UNUSEDSIGNAL */
     wire sram_sel;
@@ -116,18 +118,15 @@ module tt_um_levenshtein
         .wbs_ack_o(ctrl_slave_ack),
         .wbs_err_o(ctrl_slave_err),
         .wbs_rty_o(ctrl_slave_rty),
-        .wbs_dat_o(ctrl_slave_drd)
+        .wbs_dat_o(ctrl_slave_drd),
+
+        .sram_config(sram_config)
     );
 
     spi_controller spi_ctrl(
         .clk_i(clk),
         .rst_i(!rst_n),
 
-        .sck(uio_out[3]),
-        .mosi(uio_out[1]),
-        .miso(uio_in[2]),
-        .ss_n(uio_out[0]),
-        
         .cyc_i(sram_cyc),
         .stb_i(sram_stb),
         .adr_i({1'b0, sram_adr}),
@@ -136,7 +135,16 @@ module tt_um_levenshtein
         .ack_o(sram_ack),
         .err_o(sram_err),
         .rty_o(sram_rty),
-        .dat_o(sram_drd)
+        .dat_o(sram_drd),
+
+        .sck(uio_out[3]),
+        .mosi(uio_out[1]),
+        .miso(uio_in[2]),
+        .cs_n(uio_out[0]),
+        .cs2_n(uio_out[6]),
+        .cs3_n(uio_out[7]),
+
+        .sram_config(sram_config)
     );
 
 

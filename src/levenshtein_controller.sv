@@ -28,14 +28,14 @@ module levenshtein_controller
         input wire [SLAVE_ADDR_WIDTH - 1 : 0] wbs_adr_i,
         /* verilator lint_on UNUSEDSIGNAL */
         input wire wbs_we_i,
-        /* verilator lint_off UNUSEDSIGNAL */
         input wire [7:0] wbs_dat_i,
-        /* verilator lint_on UNUSEDSIGNAL */
         output reg wbs_ack_o,
         output wire wbs_err_o,
         output wire wbs_rty_o,
-        output reg [7:0] wbs_dat_o
+        output reg [7:0] wbs_dat_o,
         //! @end
+
+        output reg [1:0] sram_config
     );
 
     localparam BITVECTOR_WIDTH = 16;
@@ -102,7 +102,7 @@ module levenshtein_controller
 
     always_comb begin
         case (wbs_adr_i[1:0])
-            ADDR_CTRL: wbs_dat_o = {enabled, 2'b00, word_length};
+            ADDR_CTRL: wbs_dat_o = {enabled, sram_config, word_length};
             ADDR_DISTANCE: wbs_dat_o = best_distance;
             ADDR_IDX_HI: wbs_dat_o = best_idx[15:8];
             ADDR_IDX_LO: wbs_dat_o = best_idx[7:0];
@@ -127,11 +127,14 @@ module levenshtein_controller
             best_distance <= DISTANCE_WIDTH'(-1);
 
             word_length <= 5'd0;
+
+            sram_config <= 2'd0;
         end else begin
             if (wbs_cyc_i && wbs_stb_i && !wbs_ack_o) begin
                 if (wbs_we_i) begin
                     if (wbs_adr_i[1:0] == ADDR_CTRL) begin
-                        enabled <= 1'b1;
+                        enabled <= wbs_dat_i[7];
+                        sram_config <= wbs_dat_i[6:5];
                         word_length <= next_word_length;
 
                         dict_address <= DICT_ADDR_WIDTH'(DICT_ADDR);
