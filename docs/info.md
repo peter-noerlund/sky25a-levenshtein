@@ -130,7 +130,7 @@ cmake --build build
 Next, you can run the test tool:
 
 ```sh
-./build/client/client --device=/dev/ttyUSB2 --test
+./build/client/client --device tt09 --test
 ```
 
 This will load 1024 words of random length and characters into the SRAM and then perform a bunch of searches, verifying that the returned result is correct.
