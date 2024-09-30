@@ -15,14 +15,11 @@ add_executable(client
     main.cpp
     icestick_spi.cpp
     real_context.cpp
-    real_uart.cpp
     runner.cpp
     spi_bus.cpp
     test_set.cpp
-    uart_bus.cpp
     verilator_context.cpp
     verilator_spi.cpp
-    verilator_uart.cpp
 )
 target_include_directories(client PRIVATE client)
 target_compile_features(client PRIVATE cxx_std_20)
