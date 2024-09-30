@@ -62,8 +62,10 @@ The address space is basically as follows:
 | Address  | Size | Access | Identifier  |
 |----------|------|--------|-------------|
 | 0x000000 | 1    | R/W    | `CTRL`      |
-| 0x000001 | 1    | R/O    | `DISTANCE`  |
-| 0x000002 | 2    | R/O    | `INDEX`     |
+| 0x000001 | 1    | R/W    | `SRAM_CTRL` |
+| 0x000002 | 1    | R/W    | `LENGTH`    |
+| 0x000003 | 1    | R/O    | `DISTANCE`  |
+| 0x000004 | 2    | R/O    | `INDEX`     |
 | 0x000200 | 512  | R/W    | `VECTORMAP` |
 | 0x000400 | 8M   | R/W    | `DICT`      |
 
@@ -75,11 +77,35 @@ The layout is as follows:
 
 | Bits | Size | Access | Description                                                 |
 |------|------|--------|-------------------------------------------------------------|
-| 0-4  | 4    | R/W    | Word length                                                 |
-| 5-6  | 2    | R/O    | Not used                                                    |
-| 7    | 1    | R/O    | Is set to `1` while the engine runs and `0` when it is done |
+| 0    | 1    | R/W    | Enable flag                                                 |
+| 1-7  | 7    | R/O    | Not used                                                    |
 
-When data is written to this address, the engine automatically starts.
+Set the enable flag to start the engine. When the engine is finished, the enable flag is changed to `0`
+
+**SRAM_CTRL**
+
+Controls the SRAM
+
+| Bits | Size | Access | Description                                                 |
+|------|------|--------|-------------------------------------------------------------|
+| 0-1  | 2    | R/W    | Chip select                                                 |
+| 2-7  | 6    | R/O    | Not used                                                    |
+
+The chip select flag controls which chip select is used on the PMOD when accessing SRAM
+
+| Value | Pin    | Notes                                                                           |
+|-------|--------|---------------------------------------------------------------------------------|
+| 0     | _None_ | Default value                                                                   |
+| 1     | CS     | Uses the default CS on the PMOD (Pin 1). Compatible with Machdyne's QQSPI PSRAM |
+| 2     | CS2    | Uses CS2 on the PMOD (pin 6). Compatible with mole99's QSPI Flash/(P)SRAM       |
+| 3     | CS3    | Uses CS3 on the PMOD (pin 7). Compatible with mole99's QSPI Flash/(P)SRAM       |
+
+**LENGTH**
+
+| Bits | Size | Access | Description                                                 |
+|------|------|--------|-------------------------------------------------------------|
+| 0-3  | 4    | R/W    | Word length minus 1                                         |
+| 4-7  | 4    | R/O    | Not used                                                    |
 
 **DISTANCE**
 
@@ -131,7 +157,11 @@ cmake --build build
 Next, you can run the test tool:
 
 ```sh
-./build/client/client --device tt09 --test
+# Machdyne QQSPI PSRAM
+./build/client/client --device tt09 --cs cs --test
+
+# mole99 PSRAM
+./build/client/client --device tt09 --cs cs2 --test
 ```
 
 This will load 1024 words of random length and characters into the SRAM and then perform a bunch of searches, verifying that the returned result is correct.
@@ -143,6 +173,6 @@ To operate, the device needs an SPI PSRAM PMOD. The design is tested with the QQ
 * WRITE (`0x02`) with no latency
 * READ (`0x03`) with no latency
 * 24-bit addresses
-* Uses pin 0 for `SS#`.
+* Uses pin 0, 6 or 7 for `SS#`.
 
-Note, that this makes the SRAM/Flash PMOD from mole99 incompatible, but the spi-ram-emu project for the RP2040 can be used if it is changed to 24-bit adressing (It can just ignore the eight most significant bits)
+Note that this makes it incompatible with the spi-ram-emu project for the RP2040, as it uses a 16-bit address

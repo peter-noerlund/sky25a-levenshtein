@@ -1,5 +1,7 @@
 #pragma once
 
+#include "client.h"
+
 #include <asio/awaitable.hpp>
 #include <asio/io_context.hpp>
 
@@ -12,7 +14,6 @@ namespace tt09_levenshtein
 {
 
 class Context;
-class Client;
 
 class Runner
 {
@@ -23,7 +24,7 @@ public:
         Icestick
     };
 
-    explicit Runner(Device device);
+    Runner(Device device, Client::ChipSelect memoryChipSelect);
     void setVcdPath(const std::filesystem::path& vcdPath);
     
     void run(const std::optional<std::filesystem::path>& dictionaryPath, std::string_view searchWord, bool noInit, bool runRandomizedTest);
@@ -34,6 +35,7 @@ private:
     asio::awaitable<void> runTest(Client& client);
 
     Device m_device;
+    Client::ChipSelect m_memoryChipSelect;
     std::optional<std::filesystem::path> m_vcdPath;
 };
 

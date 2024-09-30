@@ -24,10 +24,17 @@ public:
         std::uint16_t index;
         std::uint8_t distance;
     };
+    enum class ChipSelect : std::uint8_t
+    {
+        None = 0,
+        CS = 1,
+        CS2 = 2,
+        CS3 = 3
+    };
     
     explicit Client(Context& context, Bus& bus) noexcept;
 
-    asio::awaitable<void> init();
+    asio::awaitable<void> init(ChipSelect memoryChipSelect);
     
     template<typename Container>
     asio::awaitable<void> loadDictionary(Container&& container)
@@ -86,16 +93,18 @@ public:
 private:
     enum ControlFlags : std::uint8_t
     {
-        ActiveFlag = 0x80
+        EnableFlag = 0x01
     };
 
     enum Address : std::uint32_t
     {
-        ControlAddress = 0x0000000,
-        DistanceAddress = 0x0000001,
-        IndexAddress = 0x0000002,
-        BaseBitvectorAddress = 0x000200,
-        BaseDictionaryAddress = 0x000400
+        ControlAddress          = 0x000000,
+        SRAMControlAddress      = 0x000001,
+        LengthAddress           = 0x000002,
+        DistanceAddress         = 0x000003,
+        IndexAddress            = 0x000004,
+        BaseBitvectorAddress    = 0x000200,
+        BaseDictionaryAddress   = 0x000400
     };
 
     enum SpecialChars : std::uint8_t

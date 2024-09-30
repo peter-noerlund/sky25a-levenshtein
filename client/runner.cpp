@@ -27,8 +27,9 @@
 namespace tt09_levenshtein
 {
 
-Runner::Runner(Device device)
+Runner::Runner(Device device, Client::ChipSelect memoryChipSelect)
     : m_device(device)
+    , m_memoryChipSelect(memoryChipSelect)
 {
 }
 
@@ -85,7 +86,7 @@ asio::awaitable<void> Runner::run(asio::io_context& ioContext, Context& context,
         if (!noInit)
         {
             fmt::println("Initializing");
-            co_await client.init();
+            co_await client.init(m_memoryChipSelect);
         }
 
         if (dictionaryPath)

@@ -18,8 +18,9 @@ Client::Client(Context& context, Bus& bus) noexcept
 {
 }
 
-asio::awaitable<void> Client::init()
+asio::awaitable<void> Client::init(ChipSelect memoryChipSelect)
 {
+    co_await writeByte(SRAMControlAddress, static_cast<std::uint8_t>(memoryChipSelect));
     for (unsigned int i = 0; i != 256; ++i)
     {
         co_await writeShort(BaseBitvectorAddress + i * 2, 0);
@@ -30,18 +31,27 @@ asio::awaitable<Client::Result> Client::search(std::string_view word)
 {
     if (word.size() > 16)
     {
-        throw std::invalid_argument(fmt::format("Word \"{}\" exceeds 16 characters", word).c_str());
+        throw std::invalid_argument(fmt::format("Word \"{}\" exceeds 16 characters", word));
+    }
+    if (word.empty())
+    {
+        throw std::invalid_argument("Word is empty");
     }
 
     // Verify accelerator is idle
 
     auto ctrl = co_await readByte(ControlAddress);
-    if ((ctrl & ActiveFlag) != 0)
+    if ((ctrl & EnableFlag) != 0)
     {
         throw std::runtime_error("Cannot search while another search is in progress");
     }
 
+    // Write length
+
+    co_await writeByte(LengthAddress, word.size() - 1);
+
     // Generate bitvectors
+
     std::map<std::uint8_t, std::uint16_t> vectorMap;
     for (auto c : word)
     {
@@ -65,14 +75,14 @@ asio::awaitable<Client::Result> Client::search(std::string_view word)
 
     // Initiate search
 
-    co_await writeByte(ControlAddress, word.size());
+    co_await writeByte(ControlAddress, EnableFlag);
 
     while (true)
     {
         co_await m_context.wait(std::chrono::microseconds(10));
 
         ctrl = co_await readByte(ControlAddress);
-        if ((ctrl & ActiveFlag) == 0)
+        if ((ctrl & EnableFlag) == 0)
         {
             break;
         }

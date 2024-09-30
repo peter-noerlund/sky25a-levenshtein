@@ -28,7 +28,9 @@ module levenshtein_controller
         input wire [SLAVE_ADDR_WIDTH - 1 : 0] wbs_adr_i,
         /* verilator lint_on UNUSEDSIGNAL */
         input wire wbs_we_i,
+        /* verilator lint_off UNUSEDSIGNAL */
         input wire [7:0] wbs_dat_i,
+        /* verilator lint_on UNUSEDSIGNAL */
         output reg wbs_ack_o,
         output wire wbs_err_o,
         output wire wbs_rty_o,
@@ -42,10 +44,12 @@ module levenshtein_controller
     localparam DISTANCE_WIDTH = 8;
     localparam ID_WIDTH = 16;
 
-    localparam ADDR_CTRL = 2'd0;
-    localparam ADDR_DISTANCE = 2'd1;
-    localparam ADDR_IDX_HI = 2'd2;
-    localparam ADDR_IDX_LO = 2'd3;
+    localparam ADDR_CTRL = 3'd0;
+    localparam ADDR_SRAM_CTRL = 3'd1;
+    localparam ADDR_LENGTH = 3'd2;
+    localparam ADDR_DISTANCE = 3'd3;
+    localparam ADDR_INDEX_HI = 3'd4;
+    localparam ADDR_INDEX_LO = 3'd5;
 
     localparam WORD_TERMINATOR = 8'h00;
     localparam DICT_TERMINATOR = 8'h01;
@@ -53,11 +57,10 @@ module levenshtein_controller
     localparam DICT_ADDR = 'h400;
 
     reg enabled;
-    reg [4:0] word_length;
+    reg [3:0] word_length_reg;
     wire [BITVECTOR_WIDTH - 1 : 0] mask;
     wire [BITVECTOR_WIDTH - 1 : 0] initial_vp;
-    wire [4:0] next_word_length;
-    wire [BITVECTOR_WIDTH - 1 : 0] next_initial_vp;
+    wire [4:0] word_length;
 
     localparam STATE_READ_DICT = 2'd0;
     localparam STATE_READ_VECTOR_HI = 2'd1;
@@ -90,22 +93,24 @@ module levenshtein_controller
         (state == STATE_READ_VECTOR_HI ? MASTER_ADDR_WIDTH'({1'b1, pm[7:0], 1'b0}) :  MASTER_ADDR_WIDTH'({1'b1, pm[7:0], 1'b1})));
     assign wbm_we_o = 1'b0;
     assign wbm_dat_o = 8'h00;
+    assign word_length = 5'(word_length_reg) + 5'd1;
 
     assign d0 = (((pm & vp) + vp) ^ vp) | pm | vn;
     assign hp = vn | ~(d0 | vp);
     assign hn = d0 & vp;
 
-    assign next_word_length = wbs_dat_i[4:0];
-    assign next_initial_vp = (1 << next_word_length) - 1;
     assign initial_vp = (1 << word_length) - 1;
     assign mask = 1 << (word_length - 1);
 
     always_comb begin
-        case (wbs_adr_i[1:0])
-            ADDR_CTRL: wbs_dat_o = {enabled, sram_config, word_length};
+        case (wbs_adr_i[2:0])
+            ADDR_CTRL: wbs_dat_o = {7'b0000000, enabled};
+            ADDR_SRAM_CTRL: wbs_dat_o = {6'b000000, sram_config};
+            ADDR_LENGTH: wbs_dat_o = {4'b0000, word_length_reg};
             ADDR_DISTANCE: wbs_dat_o = best_distance;
-            ADDR_IDX_HI: wbs_dat_o = best_idx[15:8];
-            ADDR_IDX_LO: wbs_dat_o = best_idx[7:0];
+            ADDR_INDEX_HI: wbs_dat_o = best_idx[15:8];
+            ADDR_INDEX_LO: wbs_dat_o = best_idx[7:0];
+            default: wbs_dat_o = 8'h00;
         endcase
     end
 
@@ -126,26 +131,28 @@ module levenshtein_controller
             best_idx <= ID_WIDTH'(0);
             best_distance <= DISTANCE_WIDTH'(-1);
 
-            word_length <= 5'd0;
+            word_length_reg <= 4'd0;
 
             sram_config <= 2'd0;
         end else begin
             if (wbs_cyc_i && wbs_stb_i && !wbs_ack_o) begin
                 if (wbs_we_i) begin
-                    if (wbs_adr_i[1:0] == ADDR_CTRL) begin
-                        enabled <= wbs_dat_i[7];
-                        sram_config <= wbs_dat_i[6:5];
-                        word_length <= next_word_length;
+                    if (wbs_adr_i[2:0] == ADDR_CTRL) begin
+                        enabled <= wbs_dat_i[0];
+                        state <= STATE_READ_DICT;
 
                         dict_address <= DICT_ADDR_WIDTH'(DICT_ADDR);
-                        d <= DISTANCE_WIDTH'(next_word_length);
+                        d <= DISTANCE_WIDTH'(word_length);
                         vn <= BITVECTOR_WIDTH'(0);
-                        vp <= next_initial_vp;
-                        state <= STATE_READ_DICT;
+                        vp <= initial_vp;
 
                         idx <= ID_WIDTH'(0);
                         best_idx <= ID_WIDTH'(0);
                         best_distance <= DISTANCE_WIDTH'(-1);
+                    end else if (wbs_adr_i[2:0] == ADDR_SRAM_CTRL) begin
+                        sram_config <= wbs_dat_i[1:0];
+                    end else if (wbs_adr_i[2:0] == ADDR_LENGTH) begin
+                        word_length_reg <= wbs_dat_i[3:0];
                     end
                 end
                 wbs_ack_o <= 1'b1;

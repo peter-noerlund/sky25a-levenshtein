@@ -79,9 +79,9 @@ module wb_interconnect
     wire [DATA_WIDTH - 1 : 0] dwr;
     wire [ADDR_WIDTH - 1: 0] adr;
 
-    localparam PREFIX_WIDTH = ADDR_WIDTH - 2;
+    localparam PREFIX_WIDTH = ADDR_WIDTH - 3;
 
-    wire acmp0 = adr[ADDR_WIDTH - 1 : 2] == PREFIX_WIDTH'(0);
+    wire acmp0 = adr[ADDR_WIDTH - 1 : 3] == PREFIX_WIDTH'(0);
     wire acmp1 = !acmp0;
 
     assign gnt0 = gnt == 0;
