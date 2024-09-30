@@ -5,7 +5,7 @@
 
 `default_nettype none
 
-module tt_um_pchri03_levenshtein
+module tt_um_levenshtein
     /* verilator lint_off UNUSEDSIGNAL */
     (
         input  wire [7:0] ui_in,    // Dedicated inputs

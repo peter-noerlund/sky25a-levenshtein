@@ -37,7 +37,7 @@ module top
     assign ui_in[6] = spi_mosi;
     assign spi_miso = uo_out[7];
 
-    tt_um_pchri03_levenshtein levenshtein(
+    tt_um_levenshtein levenshtein(
         .clk(clk),
         .rst_n(rst_n),
         .ena(ena),

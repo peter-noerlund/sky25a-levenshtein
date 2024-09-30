@@ -46,7 +46,7 @@ module top
         .D_IN_0(uio_in),
     );
 
-    tt_um_pchri03_levenshtein levenshtein (
+    tt_um_levenshtein levenshtein (
         .clk(clk),
         .rst_n(rst_n),
         .ena(1'b1),
