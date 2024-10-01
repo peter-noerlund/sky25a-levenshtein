@@ -3,7 +3,8 @@
 module levenshtein_controller
     #(
         parameter MASTER_ADDR_WIDTH=24,
-        parameter SLAVE_ADDR_WIDTH=24
+        parameter SLAVE_ADDR_WIDTH=24,
+        parameter BITVECTOR_WIDTH=16
     )
     (
         input wire clk_i,
@@ -40,7 +41,6 @@ module levenshtein_controller
         output logic [1:0] sram_config
     );
 
-    localparam BITVECTOR_WIDTH = 16;
     localparam DISTANCE_WIDTH = 8;
     localparam ID_WIDTH = 16;
 
