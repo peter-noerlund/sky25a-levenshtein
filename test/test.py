@@ -143,24 +143,27 @@ class Accelerator(object):
     LENGTH_ADDR = 2
     DISTANCE_ADDR = 3
     INDEX_ADDR = 4
-    VECTORMAP_BASE_ADDR = 0x000200
-    DICTIONARY_BASE_ADDR = 0x000400
 
     ENABLE_FLAG = 1
 
-    def __init__(self, bus):
+    def __init__(self, bus, bitvector_width = 16):
         self._bus = bus
+        self._bitvector_width = bitvector_width
+        self._bitvector_bytes = bitvector_width // 8
+
+        vectormap_size = 256 * self._bitvector_bytes
+        self._vectormap_base_addr = vectormap_size
+        self._dictionary_base_addr = vectormap_size * 2
 
     async def init(self, sram_select: int):
         await self._bus.write(self.SRAM_CTRL_ADDR, sram_select)
-        for i in range(0, 256):
-            await self._bus.write(self.VECTORMAP_BASE_ADDR + i * 2, 0)
-            await self._bus.write(self.VECTORMAP_BASE_ADDR + i * 2 + 1, 0)
+        for i in range(0, 256 * self._bitvector_bytes):
+            await self._bus.write(self._vectormap_base_addr + i, 0)
 
     async def load_dictionary(self, words):
         assert (await self._bus.read(self.CTRL_ADDR) & self.ENABLE_FLAG) == 0
 
-        address = self.DICTIONARY_BASE_ADDR
+        address = self._dictionary_base_addr
         for word in words:
             for c in word:
                 await self._bus.write(address, ord(c))
@@ -172,7 +175,7 @@ class Accelerator(object):
     async def verify_dictionary(self, words) -> bool:
         assert (await self._bus.read(self.CTRL_ADDR) & self.ENABLE_FLAG) == 0
 
-        address = self.DICTIONARY_BASE_ADDR
+        address = self._dictionary_base_addr
         for word in words:
             for c in word:
                 b = await self._bus.read(address)
@@ -192,6 +195,7 @@ class Accelerator(object):
     async def search(self, search_word: str):
         assert (await self._bus.read(self.CTRL_ADDR) & self.ENABLE_FLAG) == 0
         assert len(search_word) > 0
+        assert len(search_word) <= self._bitvector_width
 
         vector_map = {}
         for c in search_word:
@@ -202,8 +206,10 @@ class Accelerator(object):
             vector_map[c] = vector
 
         for c, vector in vector_map.items():
-            await self._bus.write(self.VECTORMAP_BASE_ADDR + ord(c) * 2, (vector >> 8) & 0xFF)
-            await self._bus.write(self.VECTORMAP_BASE_ADDR + ord(c) * 2 + 1, vector & 0xFF)
+            for i in range(0, self._bitvector_bytes):
+                val = (vector >> (self._bitvector_width - 8 - i * 8)) & 0xFF
+                if val != 0:
+                    await self._bus.write(self._vectormap_base_addr + ord(c) * self._bitvector_bytes + i, val)
 
         await self._bus.write(self.LENGTH_ADDR, len(search_word) - 1)
         await self._bus.write(self.CTRL_ADDR, self.ENABLE_FLAG)
@@ -220,8 +226,10 @@ class Accelerator(object):
         assert (ctrl & self.ENABLE_FLAG) == 0
 
         for c in vector_map.keys():
-            await self._bus.write(self.VECTORMAP_BASE_ADDR + ord(c) * 2, 0x00)
-            await self._bus.write(self.VECTORMAP_BASE_ADDR + ord(c) * 2 + 1, 0x00)
+            for i in range(0, self._bitvector_bytes):
+                val = (vector >> (self._bitvector_width - 8 - i * 8)) & 0xFF
+                if val != 0:
+                    await self._bus.write(self._vectormap_base_addr + ord(c) * self._bitvector_bytes + i, 0x00)
 
         distance = await self._bus.read(self.DISTANCE_ADDR)
 
@@ -255,7 +263,7 @@ async def test_project(dut):
 
     #uart = Uart(dut)
     wishbone = SPIWishbone(dut, period=80, period_units="ns")
-    accel = Accelerator(wishbone)
+    accel = Accelerator(wishbone, bitvector_width=16)
 
 
     dictionary = ["h", "he", "hes", "hest", "heste", "hesten"]
