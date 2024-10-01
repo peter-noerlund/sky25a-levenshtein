@@ -1,0 +1,16 @@
+if(NOT nextpnr_FOUND)
+    if(NOT DEFINED NEXTPNR_ICE40_PATH)
+        find_program(NEXTPNR_ICE40_PATH NAMES nextpnr-ice40)
+        if(${NEXTPNR_ICE40_PATH} STREQUAL "NEXTPNR_ICE40_PATH-NOTFOUND")
+            unset(NEXTPNR_ICE40_PATH)
+        endif()
+    endif()
+
+    if(DEFINED NEXTPNR_ICE40_PATH)
+        message(STATUS "nextnpr-ice40 path: ${NEXTPNR_ICE40_PATH}")
+        set(nextpnr_FOUND ON)
+    else()
+        message(STATUS "nextnpr-ice40 path: **MISSING**")
+    endif()
+endif()
+
