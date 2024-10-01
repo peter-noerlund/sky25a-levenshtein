@@ -41,11 +41,16 @@ module levenshtein_controller
         output logic [1:0] sram_config
     );
 
+    localparam BITVECTOR_BYTES = BITVECTOR_WIDTH / 8;
+    localparam BITVECTOR_ADDR_SUFFIX_WIDTH = $clog2(BITVECTOR_BYTES);
+    localparam STATE_COUNT = 2 + BITVECTOR_BYTES;
+    localparam STATE_WIDTH = $clog2(STATE_COUNT);
+
     localparam DISTANCE_WIDTH = 8;
     localparam ID_WIDTH = 16;
 
-    localparam WORD_LENGTH_REG_WIDTH = $clog2(BITVECTOR_WIDTH - 1);
-    localparam WORD_LENGTH_WIDTH = $clog2(BITVECTOR_WIDTH);
+    localparam WORD_LENGTH_REG_WIDTH = $clog2(BITVECTOR_WIDTH);
+    localparam WORD_LENGTH_WIDTH = $clog2(BITVECTOR_WIDTH + 1);
 
     localparam ADDR_CTRL = 3'd0;
     localparam ADDR_SRAM_CTRL = 3'd1;
@@ -57,7 +62,8 @@ module levenshtein_controller
     localparam WORD_TERMINATOR = 8'h00;
     localparam DICT_TERMINATOR = 8'h01;
 
-    localparam DICT_ADDR = 'h400;
+    localparam DICT_ADDR_WIDTH = MASTER_ADDR_WIDTH;
+    localparam DICT_ADDR = DICT_ADDR_WIDTH'(256 * BITVECTOR_BYTES * 2);
 
     logic enabled;
     logic [WORD_LENGTH_REG_WIDTH - 1 : 0] word_length_reg;
@@ -65,14 +71,12 @@ module levenshtein_controller
     wire [BITVECTOR_WIDTH - 1 : 0] initial_vp;
     wire [WORD_LENGTH_WIDTH - 1 : 0] word_length;
 
-    localparam STATE_READ_DICT = 2'd0;
-    localparam STATE_READ_VECTOR_HI = 2'd1;
-    localparam STATE_READ_VECTOR_LO = 2'd2;
-    localparam STATE_LEVENSHTEIN = 2'd3;
+    localparam STATE_READ_DICT = STATE_WIDTH'(0);
+    localparam STATE_LEVENSHTEIN = STATE_WIDTH'(1);
+    localparam STATE_READ_VECTOR_BASE = STATE_WIDTH'(2);
 
-    localparam DICT_ADDR_WIDTH = MASTER_ADDR_WIDTH;
 
-    logic [1:0] state;
+    logic [STATE_WIDTH - 1 : 0] state;
     logic [DICT_ADDR_WIDTH - 1 : 0] dict_address;
     logic cyc;
     logic [BITVECTOR_WIDTH - 1 : 0] pm;
@@ -88,6 +92,9 @@ module levenshtein_controller
     logic [ID_WIDTH - 1 : 0] idx;
     logic [ID_WIDTH - 1 : 0] best_idx;
     logic [DISTANCE_WIDTH - 1 : 0] best_distance;
+
+    integer i;
+    integer j;
 
     assign wbs_err_o = 1'b0;
     assign wbs_rty_o = 1'b0;
@@ -107,12 +114,11 @@ module levenshtein_controller
     assign mask = 1 << (word_length - 1);
 
     always_comb begin
-        if (state == STATE_READ_DICT) begin
-            wbm_adr_o = dict_address;
-        end else if (state == STATE_READ_VECTOR_HI) begin
-            wbm_adr_o = MASTER_ADDR_WIDTH'({1'b1, pm[7:0], 1'b0});
-        end else begin
-            wbm_adr_o = MASTER_ADDR_WIDTH'({1'b1, pm[7:0], 1'b1});
+        wbm_adr_o = dict_address;
+        for (i = 0; i != BITVECTOR_BYTES; i = i + 1) begin
+            if (state == STATE_READ_VECTOR_BASE + STATE_WIDTH'(i)) begin
+                wbm_adr_o = MASTER_ADDR_WIDTH'({1'b1, pm[7:0], BITVECTOR_ADDR_SUFFIX_WIDTH'(i)});
+            end
         end
     end
 
@@ -120,7 +126,7 @@ module levenshtein_controller
         case (wbs_adr_i[2:0])
             ADDR_CTRL: wbs_dat_o = {7'b0000000, enabled};
             ADDR_SRAM_CTRL: wbs_dat_o = {6'b000000, sram_config};
-            ADDR_LENGTH: wbs_dat_o = {4'b0000, word_length_reg};
+            ADDR_LENGTH: wbs_dat_o = 8'(word_length_reg);
             ADDR_DISTANCE: wbs_dat_o = best_distance;
             ADDR_INDEX_HI: wbs_dat_o = best_idx[15:8];
             ADDR_INDEX_LO: wbs_dat_o = best_idx[7:0];
@@ -175,71 +181,63 @@ module levenshtein_controller
             end
         
             if (enabled) begin
-                case (state)
-                    STATE_READ_DICT: begin
-                        if (!cyc) begin
-                            cyc <= 1'b1;
-                        end else if (wbm_ack_i) begin
-                            pm[7:0] <= wbm_dat_i;
-                            if (wbm_dat_i == WORD_TERMINATOR) begin
-                                if (d < best_distance) begin
-                                    best_idx <= idx;
-                                    best_distance <= d;
-                                end
-                                idx <= idx + ID_WIDTH'(1);
-                                d <= DISTANCE_WIDTH'(word_length);
-                                vn <= BITVECTOR_WIDTH'(0);
-                                vp <= initial_vp;
-                                state <= STATE_READ_DICT;
-                            end else if (wbm_dat_i == DICT_TERMINATOR) begin
-                                enabled <= 1'b0;
-                            end else begin
-                                state <= STATE_READ_VECTOR_HI;
+                if (state == STATE_READ_DICT) begin
+                    if (!cyc) begin
+                        cyc <= 1'b1;
+                    end else if (wbm_ack_i) begin
+                        pm[7:0] <= wbm_dat_i;
+                        if (wbm_dat_i == WORD_TERMINATOR) begin
+                            if (d < best_distance) begin
+                                best_idx <= idx;
+                                best_distance <= d;
                             end
-                            cyc <= 1'b0;
-                            dict_address <= dict_address + DICT_ADDR_WIDTH'(1);
-                        end else if (wbm_err_i || wbm_rty_i) begin
-                            cyc <= 1'b0;
+                            idx <= idx + ID_WIDTH'(1);
+                            d <= DISTANCE_WIDTH'(word_length);
+                            vn <= BITVECTOR_WIDTH'(0);
+                            vp <= initial_vp;
+                            state <= STATE_READ_DICT;
+                        end else if (wbm_dat_i == DICT_TERMINATOR) begin
                             enabled <= 1'b0;
+                        end else begin
+                            state <= STATE_READ_VECTOR_BASE;
                         end
+                        cyc <= 1'b0;
+                        dict_address <= dict_address + DICT_ADDR_WIDTH'(1);
+                    end else if (wbm_err_i || wbm_rty_i) begin
+                        cyc <= 1'b0;
+                        enabled <= 1'b0;
                     end
+                end
 
-                    STATE_READ_VECTOR_HI: begin
-                        if (!cyc) begin
+                for (j = 0; j != BITVECTOR_BYTES; j = j + 1) begin
+                    if (state == STATE_READ_VECTOR_BASE + STATE_WIDTH'(j)) begin
+                        if (j == 0 && !cyc) begin
                             cyc <= 1'b1;
                         end else if (wbm_ack_i) begin
-                            pm[15:8] <= wbm_dat_i;
-                            state <= STATE_READ_VECTOR_LO;
+                            pm[BITVECTOR_WIDTH - j * 8 - 1 -: 8] <= wbm_dat_i;
+                            if (j == BITVECTOR_BYTES - 1) begin
+                                cyc <= 1'b0;
+                                state <= STATE_LEVENSHTEIN;
+                            end else begin
+                                state <= STATE_READ_VECTOR_BASE + STATE_WIDTH'(j) + STATE_WIDTH'(1);
+                            end
                         end else if (wbm_err_i || wbm_rty_i) begin
                             cyc <= 1'b0;
                             enabled <= 1'b0;
                         end
                     end
+                end
 
-                    STATE_READ_VECTOR_LO: begin
-                        if (!cyc) begin
-                            cyc <= 1'b1;
-                        end else if (wbm_ack_i) begin
-                            pm[7:0] <= wbm_dat_i;
-                            cyc <= 1'b0;
-                            state <= STATE_LEVENSHTEIN;
-                        end else if (wbm_err_i || wbm_rty_i) begin
-                            cyc <= 1'b0;
-                            enabled <= 1'b0;
-                        end
+                if (state == STATE_LEVENSHTEIN) begin
+                    if ((hp & mask) != BITVECTOR_WIDTH'(0)) begin
+                        d <= d + DISTANCE_WIDTH'(1);
+                    end else if ((hn & mask) != BITVECTOR_WIDTH'(0)) begin
+                        d <= d - DISTANCE_WIDTH'(1);
                     end
-
-                    STATE_LEVENSHTEIN: begin
-                        if ((hp & mask) != BITVECTOR_WIDTH'(0)) begin
-                            d <= d + DISTANCE_WIDTH'(1);
-                        end else if ((hn & mask) != BITVECTOR_WIDTH'(0)) begin
-                            d <= d - DISTANCE_WIDTH'(1);
-                        end
-                        vp <= next_vp;
-                        vn <= next_vn;
-                        state <= STATE_READ_DICT;
-                    end
-                endcase
+                    vp <= next_vp;
+                    vn <= next_vn;
+                    state <= STATE_READ_DICT;
+                end
             end
         end
     end

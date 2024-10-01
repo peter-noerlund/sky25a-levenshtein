@@ -65,7 +65,7 @@ module tt_um_levenshtein
 
     wire ctrl_slave_cyc;
     wire ctrl_slave_stb;
-    wire [22:0] ctrl_slave_adr;
+    wire [2:0] ctrl_slave_adr;
     wire ctrl_slave_we;
     wire [7:0] ctrl_slave_dwr;
     wire ctrl_slave_ack;
@@ -96,7 +96,7 @@ module tt_um_levenshtein
         .dat_i(spi_drd)
     );
 
-    levenshtein_controller #(.MASTER_ADDR_WIDTH(23), .SLAVE_ADDR_WIDTH(23)) levenshtein_ctrl (
+    levenshtein_controller #(.MASTER_ADDR_WIDTH(23), .SLAVE_ADDR_WIDTH(3), .BITVECTOR_WIDTH(16)) levenshtein_ctrl (
         .clk_i(clk),
         .rst_i(!rst_n),
 
@@ -148,7 +148,7 @@ module tt_um_levenshtein
     );
 
 
-    wb_interconnect #(.ADDR_WIDTH(23)) intercon(
+    wb_interconnect #(.ADDR_WIDTH(23), .SLAVE0_ADDR_WIDTH(3)) intercon(
         .clk_i(clk),
         .rst_i(!rst_n),
 

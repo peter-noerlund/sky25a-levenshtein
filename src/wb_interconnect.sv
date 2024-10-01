@@ -4,6 +4,7 @@ module wb_interconnect
     #(
         parameter ADDR_WIDTH=24,
         parameter DATA_WIDTH=8,
+        parameter SLAVE0_ADDR_WIDTH=3,
         parameter SEL_WIDTH=DATA_WIDTH / 8
     )
     (
@@ -39,7 +40,7 @@ module wb_interconnect
         //! @virtualbus WBS0 @dir out Wishbone Slave 0
         output wire wbs0_cyc_o,                         //! Cycle
         output wire wbs0_stb_o,                         //! Strobe
-        output wire [ADDR_WIDTH - 1 : 0] wbs0_adr_o,    //! Address
+        output wire [SLAVE0_ADDR_WIDTH - 1 : 0] wbs0_adr_o,    //! Address
         output wire wbs0_we_o,                          //! Write Enable
         output wire [SEL_WIDTH - 1 : 0] wbs0_sel_o,     //! Write Select
         output wire [DATA_WIDTH - 1 : 0] wbs0_dat_o,    //! Data Out
@@ -79,9 +80,9 @@ module wb_interconnect
     wire [DATA_WIDTH - 1 : 0] dwr;
     wire [ADDR_WIDTH - 1: 0] adr;
 
-    localparam PREFIX_WIDTH = ADDR_WIDTH - 3;
+    localparam PREFIX_WIDTH = ADDR_WIDTH - SLAVE0_ADDR_WIDTH;
 
-    wire acmp0 = adr[ADDR_WIDTH - 1 : 3] == PREFIX_WIDTH'(0);
+    wire acmp0 = adr[ADDR_WIDTH - 1 : SLAVE0_ADDR_WIDTH] == PREFIX_WIDTH'(0);
     wire acmp1 = !acmp0;
 
     assign gnt0 = gnt == 0;
@@ -99,7 +100,7 @@ module wb_interconnect
 
     assign wbs0_cyc_o = cyc & acmp0;
     assign wbs0_stb_o = stb & acmp0;
-    assign wbs0_adr_o = adr;
+    assign wbs0_adr_o = adr[SLAVE0_ADDR_WIDTH - 1 : 0];
     assign wbs0_we_o = we;
     assign wbs0_sel_o = sel;
     assign wbs0_dat_o = dwr;
