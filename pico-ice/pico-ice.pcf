@@ -1,0 +1,25 @@
+# PICO-ICE_CLK
+
+set_io  --warn-no-port  MISO    27
+set_io  --warn-no-port  SS      25
+set_io  --warn-no-port  SCK     21
+set_io  --warn-no-port  MOSI    19
+
+
+# Clock
+set_io --warn-no-port ICE_CLK   35
+set_frequency ICE_CLK 12
+
+#set_io --warn-no-port   LED_R   39
+set_io --warn-no-port   LED_G   40
+#set_io --warn-no-port   LED_B   41
+
+# Probably incorrect
+set_io --warn-no-port   PMOD[0] 28
+set_io --warn-no-port   PMOD[1] 32
+set_io --warn-no-port   PMOD[2] 36
+set_io --warn-no-port   PMOD[3] 42
+set_io --warn-no-port   PMOD[4] 31
+set_io --warn-no-port   PMOD[5] 34
+set_io --warn-no-port   PMOD[6] 38
+set_io --warn-no-port   PMOD[7] 43

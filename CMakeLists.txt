@@ -74,4 +74,5 @@ add_custom_target(
 file(GLOB VERILOG_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.v ${CMAKE_CURRENT_SOURCE_DIR}/src/*.sv )
 
 add_subdirectory(client)
-add_subdirectory(fpga)
+add_subdirectory(icestick)
+add_subdirectory(pico-ice)
