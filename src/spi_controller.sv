@@ -130,7 +130,7 @@ module spi_controller
                     if (bit_counter == 5'd13) begin
                         sio_oe <= 4'b0000;
                     end
-                    if (bit_counter == 5'd19) begin
+                    if (bit_counter == 5'd21) begin
                         ack_o <= 1'b1;
                         if (!is_burst) begin
                             ss_n <= 1'b1;
@@ -142,10 +142,10 @@ module spi_controller
 
             if (we_i && bit_counter == 5'd16) begin
                 bit_counter <= 5'd0;
-            end else if (!we_i && bit_counter == 5'd21) begin
+            end else if (!we_i && bit_counter == 5'd23) begin
                 bit_counter <= 5'd0;
-            end else if (sck && !we_i && bit_counter == 5'd19 && is_burst) begin
-                bit_counter <= 5'd18;
+            end else if (sck && !we_i && bit_counter == 5'd21 && is_burst) begin
+                bit_counter <= 5'd20;
             end else if (sck) begin
                 bit_counter <= bit_counter + 5'd1;
             end
