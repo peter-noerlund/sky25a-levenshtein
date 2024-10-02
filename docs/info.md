@@ -168,11 +168,11 @@ This will load 1024 words of random length and characters into the SRAM and then
 
 ## External hardware
 
-To operate, the device needs an SPI PSRAM PMOD. The design is tested with the QQSPI PSRAM PMOD from Machdyne, but any memory PMOD will work as long as it supports:
+To operate, the device needs an QSPI PSRAM PMOD. The design is tested with the QQSPI PSRAM PMOD from Machdyne, but any memory PMOD will work as long as it supports:
 
-* WRITE (`0x02`) with no latency
-* READ (`0x03`) with no latency
+* WRITE QUAD with the command `0x38` in 1S-4S-4S mode and no latency
+* FAST READ QUAD with the command `0xE8` in 1S-4S-4S mode and 6 wait cycles
 * 24-bit addresses
-* Uses pin 0, 6 or 7 for `SS#`.
+* Uses pin 0, 6, or 7 for `SS#`.
 
 Note that this makes it incompatible with the spi-ram-emu project for the RP2040, as it uses a 16-bit address
