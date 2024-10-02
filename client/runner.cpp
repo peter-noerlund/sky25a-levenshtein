@@ -72,7 +72,7 @@ void Runner::run(const std::optional<std::filesystem::path>& dictionaryPath, std
 
     SpiBus bus(*spi);
 
-    Client client(*context, bus, 32);
+    Client client(*context, bus, 16);
 
     asio::co_spawn(ioContext, run(ioContext, *context, client, dictionaryPath, searchWord, noInit, runRandomizedTest), asio::detached);
 
