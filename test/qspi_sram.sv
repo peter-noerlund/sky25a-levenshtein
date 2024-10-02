@@ -170,9 +170,9 @@ module qspi_sram
                             counter <= 5'd1;
                         end else begin
                             if (VERBOSE) begin
-                                $display("R [%06X] => %02X", address - 1, memory[address - 1]);
+                                $display("R [%06X] => %02X", address, memory[address]);
                             end
-                            read_buffer <= memory[address];
+                            read_buffer <= memory[address + 24'd1];
                             address <= address + 24'd1;
                             counter <= 5'd0;
                         end

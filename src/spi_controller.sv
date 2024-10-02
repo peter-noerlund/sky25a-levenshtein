@@ -45,7 +45,7 @@ module spi_controller
     logic [7:0] read_command;
     logic [7:0] write_command;
     logic ss_n;
-    logic [5:0] bit_counter;
+    logic [4:0] bit_counter;
     wire is_burst;
 
     assign err_o = 1'b0;
@@ -55,51 +55,99 @@ module spi_controller
     assign cs2_n = sram_config == CONFIG_CS2 ? ss_n : 1'b1;
     assign cs3_n = sram_config == CONFIG_CS3 ? ss_n : 1'b1;
     assign is_burst = !we_i && cti_i == CTI_INCREMENTING_BURST && bte_i == BTE_LINEAR;
-    assign read_command = 8'h03;
-    assign write_command = 8'h02;
+    assign read_command = 8'hEB;
+    assign write_command = 8'h38;
+
+    /*
+        Signals
+
+        bit_counter |
+        0 (ss_n)    | Send command bit 7
+        0           | Send command bit 6
+        1           | Send command bit 5
+        2           | Send command bit 4
+        3           | Send command bit 3
+        4           | Send command bit 2
+        5           | Send command bit 1
+        6           | Send command bit 0
+        7           | Send address bit 23-20
+        8           | Send address bit 19-16
+        9           | Send address bit 15-12
+        10          | Send address bit 11-8
+        11          | Send address bit 7-4
+        12          | Send address bit 3-0
+        13          | Send data bit 7-4         | Toggle input pins
+        14          | Send data bit 3-0         |
+        15          |                           |
+        16          |                           |
+        17          |                           |
+        18          |                           |
+        19          |                           | Receive data bit 7-4
+        20          |                           | Receive data bit 3-0
+
+
+    */
 
     always @ (posedge clk_i) begin
         if (rst_i || !cyc_i || !stb_i) begin
             ack_o <= 1'b0;
             ss_n <= 1'b1;
             sck <= 1'b0;
-            bit_counter <= 6'd0;
-            sio_oe <= 4'b0001;
+            bit_counter <= 5'd0;
+            sio_oe <= 4'b0000;
             sio_out <= 4'b0000;
         end else begin
-            if (bit_counter == 6'd0) begin
+            if (bit_counter == 5'd0) begin
                 ss_n <= 1'b0;
+                sio_oe <= 4'b0001;
                 sio_out[0] <= we_i ? write_command[7] : read_command[7];
             end
             if (!ss_n) begin
                 sck <= ~sck;
             end
             if (sck) begin
-                if (bit_counter <= 6'd6) begin
+                if (bit_counter <= 5'd6) begin
                     sio_out[0] <= we_i ? write_command[6 - bit_counter] : read_command[6 - bit_counter];
                 end
-                if (bit_counter >= 6'd7 && bit_counter <= 6'd30) begin
-                    sio_out[0] <= adr_i[5'd23 - 5'(bit_counter - 6'd7)];
+                if (bit_counter >= 5'd7 && bit_counter <= 5'd12) begin
+                    sio_oe <= 4'b1111;
+                    sio_out <= adr_i[5'd23 - (bit_counter - 5'd7) * 5'd4 -: 4];
                 end
-                if (bit_counter >= 6'd31 && bit_counter <= 6'd38) begin
-                    sio_out[0] <= dat_i[3'd7 - 3'(bit_counter - 6'd31)];
-                end
-                if (bit_counter == 6'd39) begin
-                    ack_o <= 1'b1;
-                    sio_out[0] <= 1'b0;
-                    if (!is_burst) begin
+
+                if (we_i) begin
+                    if (bit_counter == 5'd13) begin
+                        sio_out <= dat_i[7:4];
+                    end
+                    if (bit_counter == 5'd14) begin
+                        sio_out <= dat_i[3:0];
+                    end
+                    if (bit_counter == 5'd15) begin
+                        sio_oe <= 4'b0000;
                         ss_n <= 1'b1;
+                        ack_o <= 1'b1;
+                    end
+                end else begin
+                    if (bit_counter == 5'd13) begin
+                        sio_oe <= 4'b0000;
+                    end
+                    if (bit_counter == 5'd19) begin
+                        ack_o <= 1'b1;
+                        if (!is_burst) begin
+                            ss_n <= 1'b1;
+                        end
                     end
                 end
-                dat_o <= {dat_o[6:0], sio_in[1]};
+                dat_o <= {dat_o[3:0], sio_in};
             end
 
-            if (bit_counter == 6'd40) begin
-                bit_counter <= 6'd0;
-            end else if (sck && bit_counter == 6'd39 && is_burst) begin
-                bit_counter <= 6'd32;
+            if (we_i && bit_counter == 5'd16) begin
+                bit_counter <= 5'd0;
+            end else if (!we_i && bit_counter == 5'd21) begin
+                bit_counter <= 5'd0;
+            end else if (sck && !we_i && bit_counter == 5'd19 && is_burst) begin
+                bit_counter <= 5'd18;
             end else if (sck) begin
-                bit_counter <= bit_counter + 6'd1;
+                bit_counter <= bit_counter + 5'd1;
             end
 
             if (ack_o) begin
