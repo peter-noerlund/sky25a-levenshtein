@@ -14,13 +14,13 @@ module spi_controller
         input wire [2:0] cti_i,
         input wire [1:0] bte_i,
         /* verilator lint_on UNUSEDSIGNAL */
-        output reg ack_o,
+        output logic ack_o,
         output wire err_o,
         output wire rty_o,
-        output reg [7:0] dat_o,
+        output logic [7:0] dat_o,
 
-        output reg sck,
-        output reg mosi,
+        output logic sck,
+        output logic mosi,
         input wire miso,
         
         output wire cs_n,
@@ -30,17 +30,17 @@ module spi_controller
         input wire [1:0] sram_config
     );
 
+    /* verilator lint_off UNUSEDPARAM */
+    localparam CTI_INCREMENTING_BURST = 3'b010;
+    localparam BTE_LINEAR = 2'b00;
+    /* verilator lint_on UNUSEDPARAM */
+
     localparam CONFIG_CS = 2'd1;
     localparam CONFIG_CS2 = 2'd2;
     localparam CONFIG_CS3 = 2'd3;
 
-    /* verilator lint_off UNUSEDPARAM */
-    localparam CTI_INCREMENT_BURST = 3'b010;
-    localparam BTE_LINEAR = 2'b00;
-    /* verilator lint_on UNUSEDPARAM */
-
-    reg ss_n;
-    reg [5:0] bit_counter;
+    logic ss_n;
+    logic [5:0] bit_counter;
 
     assign err_o = 1'b0;
     assign rty_o = 1'b0;
@@ -57,46 +57,38 @@ module spi_controller
             bit_counter <= 6'd0;
             mosi <= 1'b0;
         end else begin
-            if (cyc_i && stb_i) begin
-                ss_n <= 1'b0;
+            if (cyc_i && stb_i && !ack_o) begin
+                if (ss_n) begin
+                    ss_n <= 1'b0;
+                end
                 if (!ss_n) begin
                     sck <= ~sck;
                 end
-            end else begin
-                ss_n <= 1'b1;
-                sck <= 1'b0;
-            end
+                if (sck) begin
+                    if (bit_counter <= 6'd4) begin
+                        mosi <= 1'b0;
+                    end else if (bit_counter == 6'd5) begin
+                        mosi <= 1'b1;
+                    end else if (bit_counter == 6'd6) begin
+                        mosi <= !we_i;                        
+                    end else if (bit_counter >= 6'd7 && bit_counter <= 6'd30) begin
+                        mosi <= adr_i[5'd23 - 5'(bit_counter - 6'd7)];
+                    end else if (bit_counter >= 6'd31 && bit_counter <= 6'd38) begin
+                        mosi <= dat_i[3'd7 - 3'(bit_counter - 6'd31)];
+                    end else if (bit_counter == 6'd39) begin
+                        ack_o <= 1'b1;
+                        mosi <= 1'b0;
+                        ss_n <= 1'b1;
+                    end
 
-            if (sck) begin
-                if (bit_counter <= 6'd4) begin
-                    mosi <= 1'b0;
-                end else if (bit_counter == 6'd5) begin
-                    mosi <= 1'b1;
-                end else if (bit_counter == 6'd6) begin
-                    mosi <= !we_i;                        
-                end else if (bit_counter >= 6'd7 && bit_counter <= 6'd30) begin
-                    mosi <= adr_i[5'd23 - 5'(bit_counter - 6'd7)];
-                end else if (bit_counter >= 6'd31 && bit_counter <= 6'd38) begin
-                    mosi <= dat_i[3'd7 - 3'(bit_counter - 6'd31)];
-                end else if (bit_counter == 6'd39) begin
-                    mosi <= 1'b0;
+                    bit_counter <= bit_counter + 6'd1;
+                    dat_o <= {dat_o[6:0], miso};
                 end
-            end
-
-            if (sck && bit_counter == 6'd39) begin
-                ack_o <= 1'b1;
             end else begin
                 ack_o <= 1'b0;
-            end
-
-            if (sck) begin
-                dat_o <= {dat_o[6:0], miso};
-            end
-
-            if (bit_counter == 6'd39) begin
+                ss_n <= 1'b1;
+                sck <= 1'b0;
                 bit_counter <= 6'd0;
-            end else begin
-                bit_counter <= bit_counter + 6'd1;
             end
         end
     end
