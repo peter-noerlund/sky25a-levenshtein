@@ -10,10 +10,8 @@ module spi_controller
         input wire [23:0] adr_i,
         input wire we_i,
         input wire [7:0] dat_i,
-        /* verilator lint_off UNUSEDSIGNAL */
         input wire [2:0] cti_i,
         input wire [1:0] bte_i,
-        /* verilator lint_on UNUSEDSIGNAL */
         output logic ack_o,
         output wire err_o,
         output wire rty_o,
@@ -30,10 +28,8 @@ module spi_controller
         input wire [1:0] sram_config
     );
 
-    /* verilator lint_off UNUSEDPARAM */
     localparam CTI_INCREMENTING_BURST = 3'b010;
     localparam BTE_LINEAR = 2'b00;
-    /* verilator lint_on UNUSEDPARAM */
 
     localparam CONFIG_CS = 2'd1;
     localparam CONFIG_CS2 = 2'd2;
@@ -41,6 +37,7 @@ module spi_controller
 
     logic ss_n;
     logic [5:0] bit_counter;
+    wire is_burst;
 
     assign err_o = 1'b0;
     assign rty_o = 1'b0;
@@ -48,6 +45,7 @@ module spi_controller
     assign cs_n = sram_config == CONFIG_CS ? ss_n : 1'b1;
     assign cs2_n = sram_config == CONFIG_CS2 ? ss_n : 1'b1;
     assign cs3_n = sram_config == CONFIG_CS3 ? ss_n : 1'b1;
+    assign is_burst = !we_i && cti_i == CTI_INCREMENTING_BURST && bte_i == BTE_LINEAR;
 
     always @ (posedge clk_i) begin
         if (rst_i || !cyc_i || !stb_i) begin
@@ -82,13 +80,17 @@ module spi_controller
                 if (bit_counter == 6'd39) begin
                     ack_o <= 1'b1;
                     mosi <= 1'b0;
-                    ss_n <= 1'b1;
+                    if (!is_burst) begin
+                        ss_n <= 1'b1;
+                    end
                 end
                 dat_o <= {dat_o[6:0], miso};
             end
 
             if (bit_counter == 6'd40) begin
-                bit_counter <= 6'd0;                        
+                bit_counter <= 6'd0;
+            end else if (sck && bit_counter == 6'd39 && is_burst) begin
+                bit_counter <= 6'd32;
             end else if (sck) begin
                 bit_counter <= bit_counter + 6'd1;
             end
