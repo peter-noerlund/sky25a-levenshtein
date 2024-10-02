@@ -5,6 +5,7 @@ module spi_controller
         input wire clk_i,
         input wire rst_i,
 
+        //! @virtualbus WB @dir input Wishbone
         input wire cyc_i,
         input wire stb_i,
         input wire [23:0] adr_i,
@@ -16,14 +17,20 @@ module spi_controller
         output wire err_o,
         output wire rty_o,
         output logic [7:0] dat_o,
+        //! @end
 
-        output logic sck,
-        output logic mosi,
-        input wire miso,
+        //! @virtualbus QSPI @dir output QSPI
+        output logic sck,           //! Serial clock
+        output logic [3:0] sio_out, //! Output pins (sio_out[0] is MOSI)
+        /* verilator lint_off UNUSEDSIGNAL */
+        input wire [3:0] sio_in,    //! Input pins (sio_in[1] is MISO)
+        /* verilator lint_on UNUSEDSIGNAL */
+        output logic [3:0] sio_oe,  //! Output enable
         
-        output wire cs_n,
-        output wire cs2_n,
-        output wire cs3_n,
+        output wire cs_n,           //! Primary CS pin
+        output wire cs2_n,          //! Secondary CS pin
+        output wire cs3_n,          //! Tertiary CS pin
+        //! @end
 
         input wire [1:0] sram_config
     );
@@ -53,7 +60,8 @@ module spi_controller
             ss_n <= 1'b1;
             sck <= 1'b0;
             bit_counter <= 6'd0;
-            mosi <= 1'b0;
+            sio_oe <= 4'b0001;
+            sio_out <= 4'b0000;
         end else begin
             if (bit_counter == 6'd0) begin
                 ss_n <= 1'b0;
@@ -63,28 +71,28 @@ module spi_controller
             end
             if (sck) begin
                 if (bit_counter <= 6'd4) begin
-                    mosi <= 1'b0;
+                    sio_out[0] <= 1'b0;
                 end
                 if (bit_counter == 6'd5) begin
-                    mosi <= 1'b1;
+                    sio_out[0] <= 1'b1;
                 end
                 if (bit_counter == 6'd6) begin
-                    mosi <= !we_i;                        
+                    sio_out[0] <= !we_i;                        
                 end
                 if (bit_counter >= 6'd7 && bit_counter <= 6'd30) begin
-                    mosi <= adr_i[5'd23 - 5'(bit_counter - 6'd7)];
+                    sio_out[0] <= adr_i[5'd23 - 5'(bit_counter - 6'd7)];
                 end
                 if (bit_counter >= 6'd31 && bit_counter <= 6'd38) begin
-                    mosi <= dat_i[3'd7 - 3'(bit_counter - 6'd31)];
+                    sio_out[0] <= dat_i[3'd7 - 3'(bit_counter - 6'd31)];
                 end
                 if (bit_counter == 6'd39) begin
                     ack_o <= 1'b1;
-                    mosi <= 1'b0;
+                    sio_out[0] <= 1'b0;
                     if (!is_burst) begin
                         ss_n <= 1'b1;
                     end
                 end
-                dat_o <= {dat_o[6:0], miso};
+                dat_o <= {dat_o[6:0], sio_in[1]};
             end
 
             if (bit_counter == 6'd40) begin

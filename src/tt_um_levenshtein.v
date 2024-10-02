@@ -20,9 +20,10 @@ module tt_um_levenshtein
     /* verilator lint_on UNUSEDSIGNAL */
 
     assign uo_out[6:0] = 7'b0000000;
-    assign uio_oe = 8'b11001011;
-    assign uio_out[2] = 1'b0;
-    assign uio_out[5:4] = 2'b00;
+    
+    assign uio_oe[0] = 1'b1;        // PMOD expanded SPI (CS)
+    assign uio_oe[3] = 1'b1;        // PMOD expanded SPI (SCK)
+    assign uio_oe[7:6] = 2'b11;     // PMOD expanded SPI (CS2 + CS3)
 
     wire spi_cyc;
     wire spi_stb;
@@ -150,8 +151,9 @@ module tt_um_levenshtein
         .dat_o(sram_drd),
 
         .sck(uio_out[3]),
-        .mosi(uio_out[1]),
-        .miso(uio_in[2]),
+        .sio_in({uio_in[5:4], uio_in[2:1]}),
+        .sio_out({uio_out[5:4], uio_out[2:1]}),
+        .sio_oe({uio_oe[5:4], uio_oe[2:1]}),
         .cs_n(uio_out[0]),
         .cs2_n(uio_out[6]),
         .cs3_n(uio_out[7]),
