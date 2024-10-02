@@ -13,22 +13,22 @@
 int main(int argc, char** argv)
 {
     bool showHelp = false;
-    bool noInit = false;
-    bool runRandomizedTest = false;
     std::string deviceName = "verilog";
     std::string chipSelectName = "None";
     std::optional<std::filesystem::path> vcdPath;
-    std::optional<std::filesystem::path> dictionaryPath;
-    std::string searchWord;
+    tt09_levenshtein::Runner::Config config;
 
     auto cli = lyra::cli()
         | lyra::opt(deviceName, "DEVICE")["-d"]["--device"]("Device type").choices("verilator", "icestick")
         | lyra::opt(chipSelectName, "PIN")["-c"]["--chip-select"]("Memory chip select pin").choices("none", "cs", "cs2", "cs3")
         | lyra::opt(vcdPath, "FILE")["-v"]["--vcd-file"]("Create VCD file")
-        | lyra::opt(noInit)["--no-init"]("Skip initialization")
-        | lyra::opt(dictionaryPath, "FILE")["-l"]["--load-dictionary"]("Load dictionary")
-        | lyra::opt(searchWord, "WORD")["-s"]["--search"]("Search for word")
-        | lyra::opt(runRandomizedTest)["-t"]["--test"]("Run randomized test")
+        | lyra::opt(config.dictionaryPath, "FILE")["-l"]["--load-dictionary"]("Load dictionary")
+        | lyra::opt(config.searchWord, "WORD")["-s"]["--search"]("Search for word")
+        | lyra::opt(config.noInit)["--no-init"]("Skip initialization")
+        | lyra::opt(config.runTest)["-t"]["--test"]("Run test")
+        | lyra::opt(config.testAlphabetSize, "NUM")["--test-alphabet-size"]("Test alphabet size")
+        | lyra::opt(config.testDictionarySize, "NUM")["--test-dictionary-size"]("Test dictionary size")
+        | lyra::opt(config.testSearchCount, "NUM")["--test-search-count"]("Test search count")
         | lyra::help(showHelp);
 
     auto result = cli.parse({argc, argv});
@@ -75,7 +75,7 @@ int main(int argc, char** argv)
 
     try
     {
-        runner.run(dictionaryPath, searchWord, noInit, runRandomizedTest);
+        runner.run(config);
         return EXIT_SUCCESS;
     }
     catch (const std::exception& exception)
