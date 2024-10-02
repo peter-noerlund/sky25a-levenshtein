@@ -39,7 +39,7 @@ void Runner::setVcdPath(const std::filesystem::path& vcdPath)
     m_vcdPath = vcdPath;
 }
     
-void Runner::run(const std::optional<std::filesystem::path>& dictionaryPath, std::string_view searchWord, bool noInit, bool runRandomizedTest)
+void Runner::run(const Config& config)
 {
     asio::io_context ioContext;
     
@@ -74,41 +74,40 @@ void Runner::run(const std::optional<std::filesystem::path>& dictionaryPath, std
 
     Client client(*context, bus, 16);
 
-    asio::co_spawn(ioContext, run(ioContext, *context, client, dictionaryPath, searchWord, noInit, runRandomizedTest), asio::detached);
+    asio::co_spawn(ioContext, run(ioContext, *context, client, config), asio::detached);
 
     ioContext.run();
 }
 
-asio::awaitable<void> Runner::run(asio::io_context& ioContext, Context& context, Client& client, const std::optional<std::filesystem::path>& dictionaryPath, std::string_view searchWord, bool noInit, bool runRandomizedTest)
+asio::awaitable<void> Runner::run(asio::io_context& ioContext, Context& context, Client& client, const Config& config)
 {
     try
     {
         co_await context.init();
-        if (!noInit)
+        if (!config.noInit)
         {
             fmt::println("Initializing");
             co_await client.init(m_memoryChipSelect);
         }
 
-        if (dictionaryPath)
+        if (config.dictionaryPath)
         {
-            fmt::println("Loading dictionary");
-            co_await loadDictionary(client, *dictionaryPath);
+            fmt::println("Loading dictionary {}", config.dictionaryPath->string());
+            co_await loadDictionary(client, *config.dictionaryPath);
         }
 
-        if (!searchWord.empty())
+        if (!config.searchWord.empty())
         {
-            fmt::println("Searching for \"{}\"", searchWord);
+            fmt::println("Searching for \"{}\"", config.searchWord);
 
-            auto result = co_await client.search(searchWord);
+            auto result = co_await client.search(config.searchWord);
 
-            fmt::println("Search result for \"{}\": index={} distance={}", searchWord, result.index, result.distance);
+            fmt::println("Search result for \"{}\": index={} distance={}", config.searchWord, result.index, result.distance);
         }
 
-        if (runRandomizedTest)
+        if (config.runTest)
         {
-            fmt::println("Running randomized test");
-            co_await runTest(client);
+            co_await runTest(client, config);
         }
     }
     catch (const std::exception& exception)
@@ -118,28 +117,28 @@ asio::awaitable<void> Runner::run(asio::io_context& ioContext, Context& context,
     ioContext.stop();
 }
 
-asio::awaitable<void> Runner::runTest(Client& client)
+asio::awaitable<void> Runner::runTest(Client& client, const Config& config)
 {
     TestSet::Config testConfig;
     testConfig.minChar = 'a';
-    testConfig.maxChar = 'f';
+    testConfig.maxChar = 'a' + config.testAlphabetSize;
     testConfig.minDictionaryWordLength = 1;
     testConfig.maxDictionaryWordLength = std::min(255U, client.bitvectorSize() * 2);
-    testConfig.dictionaryWordCount = 1024;
+    testConfig.dictionaryWordCount = config.testDictionarySize;
     testConfig.minSearchWordLength = 1;
     testConfig.maxSearchWordLength = client.bitvectorSize();
-    testConfig.searchWordCount = 256;
+    testConfig.searchWordCount = config.testSearchCount;
 
     TestSet testSet(testConfig);
 
-    fmt::println("Loading dictionary");
+    fmt::println("Loading dictionary of {} word(s)", config.testDictionarySize);
     auto dictionaryWords = testSet.dictionaryWords();
     co_await client.loadDictionary(dictionaryWords);
 
     fmt::println("Verifying dictionary");
     co_await client.verifyDictionary(dictionaryWords);
 
-    fmt::println("Searching for words");
+    fmt::println("Searching for {} word(s)", config.testSearchCount);
 
     for (const auto& searchWord : testSet.searchWords())
     {
