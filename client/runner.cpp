@@ -121,7 +121,7 @@ asio::awaitable<void> Runner::runTest(Client& client, const Config& config)
 {
     TestSet::Config testConfig;
     testConfig.minChar = 'a';
-    testConfig.maxChar = 'a' + config.testAlphabetSize;
+    testConfig.maxChar = 'a' + config.testAlphabetSize - 1;
     testConfig.minDictionaryWordLength = 1;
     testConfig.maxDictionaryWordLength = std::min(255U, client.bitvectorSize() * 2);
     testConfig.dictionaryWordCount = config.testDictionarySize;
