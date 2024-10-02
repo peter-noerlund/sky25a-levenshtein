@@ -16,6 +16,8 @@ module levenshtein_controller
         output logic [MASTER_ADDR_WIDTH - 1 : 0] wbm_adr_o,
         output wire wbm_we_o,
         output wire [7:0] wbm_dat_o,
+        output logic [2:0] wbm_cti_o,
+        output logic [1:0] wbm_bte_o,
         input wire wbm_ack_i,
         input wire wbm_err_i,
         input wire wbm_rty_i,
@@ -31,6 +33,8 @@ module levenshtein_controller
         input wire wbs_we_i,
         /* verilator lint_off UNUSEDSIGNAL */
         input wire [7:0] wbs_dat_i,
+        input wire [2:0] wbs_cti_i,
+        input wire [1:0] wbs_bte_i,
         /* verilator lint_on UNUSEDSIGNAL */
         output logic wbs_ack_o,
         output wire wbs_err_o,
@@ -40,6 +44,12 @@ module levenshtein_controller
 
         output logic [1:0] sram_config
     );
+
+    localparam CTI_CLASSIC = 3'b000;
+    localparam CTI_INCREMENTAL_BURST = 3'b010;
+    localparam CTI_END_OF_BURST = 3'b111;
+
+    localparam BTE_LINEAR_BURST = 2'b00;
 
     localparam BITVECTOR_BYTES = BITVECTOR_WIDTH / 8;
     localparam BITVECTOR_ADDR_SUFFIX_WIDTH = $clog2(BITVECTOR_BYTES);
@@ -115,9 +125,19 @@ module levenshtein_controller
 
     always_comb begin
         wbm_adr_o = dict_address;
+        wbm_cti_o = CTI_CLASSIC;
+        wbm_bte_o = 2'b00;
+
         for (i = 0; i != BITVECTOR_BYTES; i = i + 1) begin
             if (state == STATE_READ_VECTOR_BASE + STATE_WIDTH'(i)) begin
                 wbm_adr_o = MASTER_ADDR_WIDTH'({1'b1, pm[7:0], BITVECTOR_ADDR_SUFFIX_WIDTH'(i)});
+                if (BITVECTOR_BYTES > 1 && i == BITVECTOR_BYTES - 1) begin
+                    wbm_cti_o = CTI_END_OF_BURST;
+                    wbm_bte_o = 2'b00;
+                end else begin
+                    wbm_cti_o = CTI_INCREMENTAL_BURST;
+                    wbm_bte_o = BTE_LINEAR_BURST;
+                end
             end
         end
     end

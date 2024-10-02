@@ -57,6 +57,8 @@ module tt_um_levenshtein
     wire [22:0] ctrl_master_adr;
     wire ctrl_master_we;
     wire [7:0] ctrl_master_dwr;
+    wire [2:0] ctrl_master_cti;
+    wire [1:0] ctrl_master_bte;
     wire ctrl_master_ack;
     wire ctrl_master_err;
     wire ctrl_master_rty;
@@ -70,14 +72,14 @@ module tt_um_levenshtein
     wire [2:0] ctrl_slave_adr;
     wire ctrl_slave_we;
     wire [7:0] ctrl_slave_dwr;
+    wire [2:0] ctrl_slave_cti;
+    wire [1:0] ctrl_slave_bte;
     wire ctrl_slave_ack;
     wire ctrl_slave_err;
     wire ctrl_slave_rty;
     wire [7:0] ctrl_slave_drd;
     /* verilator lint_off UNUSEDSIGNAL */
     wire ctrl_slave_sel;
-    wire [2:0] ctrl_slave_cti;
-    wire [1:0] ctrl_slave_bte;
     /* verilator lint_on UNUSEDSIGNAL */
 
     spi_wishbone_bridge spi(
@@ -109,6 +111,8 @@ module tt_um_levenshtein
         .wbm_adr_o(ctrl_master_adr),
         .wbm_we_o(ctrl_master_we),
         .wbm_dat_o(ctrl_master_dwr),
+        .wbm_cti_o(ctrl_master_cti),
+        .wbm_bte_o(ctrl_master_bte),
         .wbm_ack_i(ctrl_master_ack),
         .wbm_err_i(ctrl_master_err),
         .wbm_rty_i(ctrl_master_rty),
@@ -119,6 +123,8 @@ module tt_um_levenshtein
         .wbs_adr_i(ctrl_slave_adr),
         .wbs_we_i(ctrl_slave_we),
         .wbs_dat_i(ctrl_slave_dwr),
+        .wbs_cti_i(ctrl_slave_cti),
+        .wbs_bte_i(ctrl_slave_bte),
         .wbs_ack_o(ctrl_slave_ack),
         .wbs_err_o(ctrl_slave_err),
         .wbs_rty_o(ctrl_slave_rty),
@@ -136,6 +142,8 @@ module tt_um_levenshtein
         .adr_i({1'b0, sram_adr}),
         .dat_i(sram_dwr),
         .we_i(sram_we),
+        .cti_i(sram_cti),
+        .bte_i(sram_bte),
         .ack_o(sram_ack),
         .err_o(sram_err),
         .rty_o(sram_rty),
@@ -175,8 +183,8 @@ module tt_um_levenshtein
         .wbm1_we_i(ctrl_master_we),
         .wbm1_sel_i(1'b0),
         .wbm1_dat_i(ctrl_master_dwr),
-        .wbm1_cti_i(3'b000),
-        .wbm1_bte_i(2'b00),
+        .wbm1_cti_i(ctrl_master_cti),
+        .wbm1_bte_i(ctrl_master_bte),
         .wbm1_ack_o(ctrl_master_ack),
         .wbm1_err_o(ctrl_master_err),
         .wbm1_rty_o(ctrl_master_rty),
