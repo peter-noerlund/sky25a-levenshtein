@@ -17,6 +17,7 @@
 #include <asio/this_coro.hpp>
 #include <fmt/printf.h>
 
+#include <algorithm>
 #include <cctype>
 #include <cstdio>
 #include <exception>
@@ -71,7 +72,7 @@ void Runner::run(const std::optional<std::filesystem::path>& dictionaryPath, std
 
     SpiBus bus(*spi);
 
-    Client client(*context, bus);
+    Client client(*context, bus, 32);
 
     asio::co_spawn(ioContext, run(ioContext, *context, client, dictionaryPath, searchWord, noInit, runRandomizedTest), asio::detached);
 
@@ -123,10 +124,10 @@ asio::awaitable<void> Runner::runTest(Client& client)
     testConfig.minChar = 'a';
     testConfig.maxChar = 'f';
     testConfig.minDictionaryWordLength = 1;
-    testConfig.maxDictionaryWordLength = 32;
+    testConfig.maxDictionaryWordLength = std::min(255U, client.bitvectorSize() * 2);
     testConfig.dictionaryWordCount = 1024;
     testConfig.minSearchWordLength = 1;
-    testConfig.maxSearchWordLength = 16;
+    testConfig.maxSearchWordLength = client.bitvectorSize();
     testConfig.searchWordCount = 256;
 
     TestSet testSet(testConfig);

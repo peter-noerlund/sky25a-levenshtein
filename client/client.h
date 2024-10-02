@@ -32,7 +32,12 @@ public:
         CS3 = 3
     };
     
-    explicit Client(Context& context, Bus& bus) noexcept;
+    explicit Client(Context& context, Bus& bus, unsigned int bitvectorSize=16) noexcept;
+
+    constexpr unsigned int bitvectorSize() const noexcept
+    {
+        return m_bitvectorSize;
+    }
 
     asio::awaitable<void> init(ChipSelect memoryChipSelect);
     
@@ -42,7 +47,7 @@ public:
         constexpr auto wordTerminator = std::to_array<std::uint8_t>({WordTerminator});
         constexpr auto listTerminator = std::to_array<std::uint8_t>({ListTerminator});
 
-        std::uint32_t address = BaseDictionaryAddress;
+        std::uint32_t address = m_dictionaryAddress;
         for (const auto& word : container)
         {
             co_await m_bus.write(address, std::as_bytes(std::span(word)));
@@ -60,7 +65,7 @@ public:
     {
         std::vector<std::uint8_t> buffer;
 
-        std::uint32_t address = BaseDictionaryAddress;
+        std::uint32_t address = m_dictionaryAddress;
         for (const auto& word : container)
         {
             buffer.resize(word.size() + 1);
@@ -102,9 +107,7 @@ private:
         SRAMControlAddress      = 0x000001,
         LengthAddress           = 0x000002,
         DistanceAddress         = 0x000003,
-        IndexAddress            = 0x000004,
-        BaseBitvectorAddress    = 0x000200,
-        BaseDictionaryAddress   = 0x000400
+        IndexAddress            = 0x000004
     };
 
     enum SpecialChars : std::uint8_t
@@ -120,6 +123,9 @@ private:
 
     Context& m_context;
     Bus& m_bus;
+    unsigned int m_bitvectorSize;
+    std::uint32_t m_vectorMapAddress;
+    std::uint32_t m_dictionaryAddress;
 };
 
 } // namespace tt09_levenshtein

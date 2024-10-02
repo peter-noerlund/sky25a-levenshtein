@@ -1,5 +1,6 @@
 #include "client.h"
 
+#include "bit_vector.h"
 #include "bus.h"
 #include "context.h"
 
@@ -8,30 +9,34 @@
 #include <cstdint>
 #include <map>
 #include <stdexcept>
+#include <vector>
 
 namespace tt09_levenshtein
 {
 
-Client::Client(Context& context, Bus& bus) noexcept
+Client::Client(Context& context, Bus& bus, unsigned int bitvectorSize) noexcept
     : m_context(context)
     , m_bus(bus)
+    , m_bitvectorSize(bitvectorSize)
+    , m_vectorMapAddress(256 * bitvectorSize / 8)
+    , m_dictionaryAddress(m_vectorMapAddress * 2)
 {
 }
 
 asio::awaitable<void> Client::init(ChipSelect memoryChipSelect)
 {
     co_await writeByte(SRAMControlAddress, static_cast<std::uint8_t>(memoryChipSelect));
-    for (unsigned int i = 0; i != 256; ++i)
+    for (unsigned int i = 0; i != 256 * m_bitvectorSize / 8; ++i)
     {
-        co_await writeShort(BaseBitvectorAddress + i * 2, 0);
+        co_await writeByte(m_vectorMapAddress + i, 0);
     }
 }
 
 asio::awaitable<Client::Result> Client::search(std::string_view word)
 {
-    if (word.size() > 16)
+    if (word.size() > m_bitvectorSize)
     {
-        throw std::invalid_argument(fmt::format("Word \"{}\" exceeds 16 characters", word));
+        throw std::invalid_argument(fmt::format("Word \"{}\" exceeds {} characters", word, m_bitvectorSize));
     }
     if (word.empty())
     {
@@ -52,15 +57,15 @@ asio::awaitable<Client::Result> Client::search(std::string_view word)
 
     // Generate bitvectors
 
-    std::map<std::uint8_t, std::uint16_t> vectorMap;
+    std::map<std::uint8_t, BitVector> vectorMap;
     for (auto c : word)
     {
-        std::uint16_t vector = 0;
+        BitVector vector(m_bitvectorSize);
         for (std::string_view::size_type i = 0; i != word.size(); ++i)
         {
             if (word[i] == c)
             {
-                vector |= (1 << i);
+                vector.set(i);
             }
         }
         vectorMap[static_cast<std::uint8_t>(c)] = vector;
@@ -70,7 +75,7 @@ asio::awaitable<Client::Result> Client::search(std::string_view word)
 
     for (auto [c, vector] : vectorMap)
     {
-        co_await writeShort(BaseBitvectorAddress + static_cast<std::uint32_t>(c) * 2, vector);
+        co_await m_bus.write(m_vectorMapAddress + static_cast<std::uint8_t>(c) * m_bitvectorSize / 8, std::as_bytes(vector.data()));
     }
 
     // Initiate search
@@ -95,7 +100,7 @@ asio::awaitable<Client::Result> Client::search(std::string_view word)
     // Clear bitvectors
     for (auto [c, vector] : vectorMap)
     {
-        co_await writeShort(BaseBitvectorAddress + static_cast<std::uint32_t>(c) * 2, 0);
+        co_await m_bus.write(m_vectorMapAddress + static_cast<std::uint32_t>(c) * m_bitvectorSize / 8, std::as_bytes(BitVector().data()));
     }
 
     co_return result;
