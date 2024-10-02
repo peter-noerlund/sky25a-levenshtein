@@ -57,43 +57,44 @@ module spi_controller
             bit_counter <= 6'd0;
             mosi <= 1'b0;
         end else begin
-            if (!ack_o) begin
-                if (ss_n) begin
-                    ss_n <= 1'b0;
+            if (bit_counter == 6'd0) begin
+                ss_n <= 1'b0;
+            end
+            if (!ss_n) begin
+                sck <= ~sck;
+            end
+            if (sck) begin
+                if (bit_counter <= 6'd4) begin
+                    mosi <= 1'b0;
                 end
-                if (!ss_n) begin
-                    sck <= ~sck;
+                if (bit_counter == 6'd5) begin
+                    mosi <= 1'b1;
                 end
-                if (sck) begin
-                    if (bit_counter <= 6'd4) begin
-                        mosi <= 1'b0;
-                    end
-                    if (bit_counter == 6'd5) begin
-                        mosi <= 1'b1;
-                    end
-                    if (bit_counter == 6'd6) begin
-                        mosi <= !we_i;                        
-                    end
-                    if (bit_counter >= 6'd7 && bit_counter <= 6'd30) begin
-                        mosi <= adr_i[5'd23 - 5'(bit_counter - 6'd7)];
-                    end
-                    if (bit_counter >= 6'd31 && bit_counter <= 6'd38) begin
-                        mosi <= dat_i[3'd7 - 3'(bit_counter - 6'd31)];
-                    end
-                    if (bit_counter == 6'd39) begin
-                        ack_o <= 1'b1;
-                        mosi <= 1'b0;
-                        ss_n <= 1'b1;
-                    end
+                if (bit_counter == 6'd6) begin
+                    mosi <= !we_i;                        
+                end
+                if (bit_counter >= 6'd7 && bit_counter <= 6'd30) begin
+                    mosi <= adr_i[5'd23 - 5'(bit_counter - 6'd7)];
+                end
+                if (bit_counter >= 6'd31 && bit_counter <= 6'd38) begin
+                    mosi <= dat_i[3'd7 - 3'(bit_counter - 6'd31)];
+                end
+                if (bit_counter == 6'd39) begin
+                    ack_o <= 1'b1;
+                    mosi <= 1'b0;
+                    ss_n <= 1'b1;
+                end
+                dat_o <= {dat_o[6:0], miso};
+            end
 
-                    bit_counter <= bit_counter + 6'd1;
-                    dat_o <= {dat_o[6:0], miso};
-                end
-            end else begin
+            if (bit_counter == 6'd40) begin
+                bit_counter <= 6'd0;                        
+            end else if (sck) begin
+                bit_counter <= bit_counter + 6'd1;
+            end
+
+            if (ack_o) begin
                 ack_o <= 1'b0;
-                ss_n <= 1'b1; // remove?
-                sck <= 1'b0; // remove?
-                bit_counter <= 6'd0; // remove?
             end
         end
     end
