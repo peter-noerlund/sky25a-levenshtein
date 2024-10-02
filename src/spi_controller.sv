@@ -50,19 +50,22 @@ module spi_controller
     assign cs3_n = sram_config == CONFIG_CS3 ? ss_n : 1'b1;
 
     always @ (posedge clk_i) begin
-        if (rst_i) begin
+        if (rst_i || !cyc_i || !stb_i) begin
             ack_o <= 1'b0;
             ss_n <= 1'b1;
             sck <= 1'b0;
             bit_counter <= 6'd0;
             mosi <= 1'b0;
         end else begin
-            if (cyc_i && stb_i && !ack_o) begin
+            if (!ack_o) begin
                 if (ss_n) begin
                     ss_n <= 1'b0;
                 end
                 if (!ss_n) begin
                     sck <= ~sck;
+                end
+                if (ack_o) begin
+                    ack_o <= 1'b0;
                 end
                 if (sck) begin
                     if (bit_counter <= 6'd4) begin
