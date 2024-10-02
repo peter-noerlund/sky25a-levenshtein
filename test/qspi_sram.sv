@@ -7,7 +7,7 @@ module qspi_sram
         parameter CMD_READ_1S_1S_1S=8'h03,
         parameter CMD_WRITE_1S_4S_4S=8'h38,
         parameter CMD_READ_1S_4S_4S=8'hEB,
-        parameter WAIT_CYCLES=4,
+        parameter WAIT_CYCLES=6,
         parameter VERBOSE=1
     )
     (
