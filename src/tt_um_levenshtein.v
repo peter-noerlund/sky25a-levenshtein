@@ -103,7 +103,7 @@ module tt_um_levenshtein
         .dat_i(spi_drd)
     );
 
-    levenshtein_controller #(.MASTER_ADDR_WIDTH(23), .SLAVE_ADDR_WIDTH(3), .BITVECTOR_WIDTH(16)) levenshtein_ctrl (
+    levenshtein_controller #(.MASTER_ADDR_WIDTH(23), .SLAVE_ADDR_WIDTH(3), .BITVECTOR_WIDTH(20)) levenshtein_ctrl (
         .clk_i(clk),
         .rst_i(!rst_n),
 

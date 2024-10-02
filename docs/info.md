@@ -59,18 +59,16 @@ As indicated by the SPI protocol, the address space is 23 bits.
 
 The address space is basically as follows:
 
-| Address   | Size | Access | Identifier   |
-|-----------|------|--------|--------------|
-| 0x000000  | 1    | R/W    | `CTRL`       |
-| 0x000001  | 1    | R/W    | `SRAM_CTRL`  |
-| 0x000002  | 1    | R/W    | `LENGTH`     |
-| 0x000003  | 1    | R/O    | `MAX_LENGTH` |
-| 0x000004  | 2    | R/O    | `INDEX`      |
-| 0x000006  | 1    | R/O    | `DISTANCE`   |
-| 0x000200¹ | 512  | R/W    | `VECTORMAP`  |
-| 0x000400¹ | 8M   | R/W    | `DICT`       |
-
-¹ The actual address is determined by the `MAX_LENGTH` field.
+| Address  | Size | Access | Identifier   |
+|----------|------|--------|--------------|
+| 0x000000 | 1    | R/W    | `CTRL`       |
+| 0x000001 | 1    | R/W    | `SRAM_CTRL`  |
+| 0x000002 | 1    | R/W    | `LENGTH`     |
+| 0x000003 | 1    | R/O    | `MAX_LENGTH` |
+| 0x000004 | 2    | R/O    | `INDEX`      |
+| 0x000006 | 1    | R/O    | `DISTANCE`   |
+| 0x000200 | 512  | R/W    | `VECTORMAP`  |
+| 0x000400 | 8M   | R/W    | `DICT`       |
 
 **CTRL**
 
@@ -107,7 +105,7 @@ The chip select flag controls which chip select is used on the PMOD when accessi
 
 | Bits | Size | Access | Description                                                 |
 |------|------|--------|-------------------------------------------------------------|
-| 0-7  | 4    | R/W    | Word length minus 1                                         |
+| 0-7  | 8    | R/W    | Word length minus 1                                         |
 
 Used to indicate the length of the search word. Note that the word cannot be empty and it cannot
 exceed the value indicated by `MAX_LENGTH` (Currently 16)
@@ -120,6 +118,18 @@ exceed the value indicated by `MAX_LENGTH` (Currently 16)
 
 This field allows for applications to dynamically detect the size of the bit vector.
 
+A generic client can calculate the addresses, sizes and alignments based on the `MAX_LENGTH` value.
+
+The bitvector size is equal the max word length, but stored as bytes in big endian order.
+
+The bitvector alignment is rounded up to either 1, 2, 4, 8, 16, or 32 depending on the bitvector size.
+
+The vector map size is equal to 256 times the bitvector alignment.
+
+The vector map address is equal to the vector map size.
+
+The dictionary address is equal to the vector map address + the vector map size.
+
 **DISTANCE**
 
 When the engine has finished executing, this address contains the levenshtein distance of the best match.
@@ -131,10 +141,6 @@ When the engine has finished executing, this address contains the index of the b
 **VECTORMAP**
 
 The vector map must contain the corresponding bitvector for each input byte in the alphabet.
-
-The size of the bitvectors are determined by the `MAX_LENGTH` field (which is 16).
-
-The actual address of the vectormap is really determined by the calculation `256 * MAX_LENGTH / 8` (Which is `512` or `0x200`),
 
 If the search word is `application`, the bit vectors will look as follows:
 
@@ -155,8 +161,6 @@ Since each vector is 16-bit, the corresponding address is `0x200 + index * 2`
 **DICT**
 
 The word list.
-
-The actual address of the word list is really determined by the calculation `512 * MAX_LENGTH / 8` (Which is `1024` or `0x400`),
 
 The word list is stored of a sequence of words, each encoded as a sequence of 8-bit characters and terminated by the byte value `0x00`. The list itself is terminated with the byte value `0x01`.
 

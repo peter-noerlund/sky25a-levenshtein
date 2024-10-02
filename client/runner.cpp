@@ -123,10 +123,10 @@ asio::awaitable<void> Runner::runTest(Client& client, const Config& config)
     testConfig.minChar = 'a';
     testConfig.maxChar = 'a' + config.testAlphabetSize - 1;
     testConfig.minDictionaryWordLength = 1;
-    testConfig.maxDictionaryWordLength = std::min(255U, client.bitvectorSize() * 2);
+    testConfig.maxDictionaryWordLength = std::min(255U, client.maxLength() * 2);
     testConfig.dictionaryWordCount = config.testDictionarySize;
     testConfig.minSearchWordLength = 1;
-    testConfig.maxSearchWordLength = client.bitvectorSize();
+    testConfig.maxSearchWordLength = client.maxLength();
     testConfig.searchWordCount = config.testSearchCount;
 
     TestSet testSet(testConfig);

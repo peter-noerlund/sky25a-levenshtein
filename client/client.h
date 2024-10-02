@@ -34,9 +34,9 @@ public:
     
     explicit Client(Context& context, Bus& bus) noexcept;
 
-    constexpr unsigned int bitvectorSize() const noexcept
+    constexpr unsigned int maxLength() const noexcept
     {
-        return m_bitvectorSize;
+        return m_maxLength;
     }
 
     asio::awaitable<void> init(ChipSelect memoryChipSelect);
@@ -124,7 +124,9 @@ private:
 
     Context& m_context;
     Bus& m_bus;
+    unsigned int m_maxLength = 0;
     unsigned int m_bitvectorSize = 0;
+    unsigned int m_bitvectorAlignment = 0;
     std::uint32_t m_vectorMapAddress = 0;
     std::uint32_t m_dictionaryAddress = 0;
 };

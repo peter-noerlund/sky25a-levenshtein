@@ -51,7 +51,7 @@ module levenshtein_controller
 
     localparam BTE_LINEAR_BURST = 2'b00;
 
-    localparam BITVECTOR_BYTES = BITVECTOR_WIDTH / 8;
+    localparam BITVECTOR_BYTES = (BITVECTOR_WIDTH + 7) / 8;
     localparam BITVECTOR_ADDR_SUFFIX_WIDTH = $clog2(BITVECTOR_BYTES);
     localparam STATE_COUNT = 2 + BITVECTOR_BYTES;
     localparam STATE_WIDTH = $clog2(STATE_COUNT);
@@ -73,8 +73,7 @@ module levenshtein_controller
     localparam WORD_TERMINATOR = 8'h00;
     localparam DICT_TERMINATOR = 8'h01;
 
-    localparam DICT_ADDR_WIDTH = MASTER_ADDR_WIDTH;
-    localparam DICT_ADDR = DICT_ADDR_WIDTH'(256 * BITVECTOR_BYTES * 2);
+    localparam DICT_ADDR = MASTER_ADDR_WIDTH'({10'b10_00000000, BITVECTOR_ADDR_SUFFIX_WIDTH'(0)});
 
     logic enabled;
     logic [WORD_LENGTH_REG_WIDTH - 1 : 0] word_length_reg;
@@ -86,9 +85,8 @@ module levenshtein_controller
     localparam STATE_LEVENSHTEIN = STATE_WIDTH'(1);
     localparam STATE_READ_VECTOR_BASE = STATE_WIDTH'(2);
 
-
     logic [STATE_WIDTH - 1 : 0] state;
-    logic [DICT_ADDR_WIDTH - 1 : 0] dict_address;
+    logic [MASTER_ADDR_WIDTH - 1 : 0] dict_address;
     logic cyc;
     logic [BITVECTOR_WIDTH - 1 : 0] pm;
     wire [BITVECTOR_WIDTH - 1 : 0] d0;
@@ -163,7 +161,7 @@ module levenshtein_controller
 
             cyc <= 1'b0;
 
-            dict_address <= DICT_ADDR_WIDTH'(DICT_ADDR);
+            dict_address <= DICT_ADDR;
             d <= DISTANCE_WIDTH'(0);
             vp <= BITVECTOR_WIDTH'(0);
             vn <= BITVECTOR_WIDTH'(0);
@@ -183,7 +181,7 @@ module levenshtein_controller
                         enabled <= wbs_dat_i[0];
                         state <= STATE_READ_DICT;
 
-                        dict_address <= DICT_ADDR_WIDTH'(DICT_ADDR);
+                        dict_address <= DICT_ADDR;
                         d <= DISTANCE_WIDTH'(word_length);
                         vn <= BITVECTOR_WIDTH'(0);
                         vp <= initial_vp;
@@ -224,7 +222,7 @@ module levenshtein_controller
                             state <= STATE_READ_VECTOR_BASE;
                         end
                         cyc <= 1'b0;
-                        dict_address <= dict_address + DICT_ADDR_WIDTH'(1);
+                        dict_address <= dict_address + MASTER_ADDR_WIDTH'(1);
                     end else if (wbm_err_i || wbm_rty_i) begin
                         cyc <= 1'b0;
                         enabled <= 1'b0;
@@ -236,7 +234,11 @@ module levenshtein_controller
                         if (j == 0 && !cyc) begin
                             cyc <= 1'b1;
                         end else if (wbm_ack_i) begin
-                            pm[BITVECTOR_WIDTH - j * 8 - 1 -: 8] <= wbm_dat_i;
+                            if (j == 0 && BITVECTOR_BYTES * 8 > BITVECTOR_WIDTH) begin
+                                pm[BITVECTOR_WIDTH - 1 : (BITVECTOR_BYTES - 1) * 8] <= wbm_dat_i[BITVECTOR_WIDTH - (BITVECTOR_BYTES - 1) * 8 - 1 : 0];
+                            end else begin
+                                pm[(BITVECTOR_BYTES - j) * 8 - 1 -: 8] <= wbm_dat_i;
+                            end
                             if (j == BITVECTOR_BYTES - 1) begin
                                 cyc <= 1'b0;
                                 state <= STATE_LEVENSHTEIN;

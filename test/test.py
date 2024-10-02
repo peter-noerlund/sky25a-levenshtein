@@ -151,16 +151,29 @@ class Accelerator(object):
         self._bus = bus
 
     async def init(self, sram_select: int):
-        self._bitvector_width = await self._bus.read(self.MAX_LENGTH_ADDR) + 1
-        self._bitvector_bytes = self._bitvector_width // 8
+        self._max_length = await self._bus.read(self.MAX_LENGTH_ADDR) + 1
+        self._bitvector_size = ((self._max_length + 7) // 8) * 8
+        if self._bitvector_size > 128:
+            self._bitvector_alignment = 32
+        elif self._bitvector_size > 64:
+            self._bitvector_alignment = 16
+        elif self._bitvector_size > 32:
+            self._bitvector_alignment = 8
+        elif self._bitvector_size > 16:
+            self._bitvector_alignment = 4
+        elif self._bitvector_size > 8:
+            self._bitvector_alignment = 2
+        else:
+            self._bitvector_alignment = 1
 
-        vectormap_size = 256 * self._bitvector_bytes
+        vectormap_size = 256 * self._bitvector_alignment
         self._vectormap_base_addr = vectormap_size
         self._dictionary_base_addr = vectormap_size * 2
 
         await self._bus.write(self.SRAM_CTRL_ADDR, sram_select)
-        for i in range(0, 256 * self._bitvector_bytes):
-            await self._bus.write(self._vectormap_base_addr + i, 0)
+        for i in range(0, 256):
+            for j in range(0, self._bitvector_size // 8):
+                await self._bus.write(self._vectormap_base_addr + i * self._bitvector_alignment + j, 0)
 
     async def load_dictionary(self, words):
         assert (await self._bus.read(self.CTRL_ADDR) & self.ENABLE_FLAG) == 0
@@ -197,7 +210,7 @@ class Accelerator(object):
     async def search(self, search_word: str):
         assert (await self._bus.read(self.CTRL_ADDR) & self.ENABLE_FLAG) == 0
         assert len(search_word) > 0
-        assert len(search_word) <= self._bitvector_width
+        assert len(search_word) <= self._max_length
 
         vector_map = {}
         for c in search_word:
@@ -208,10 +221,10 @@ class Accelerator(object):
             vector_map[c] = vector
 
         for c, vector in vector_map.items():
-            for i in range(0, self._bitvector_bytes):
-                val = (vector >> (self._bitvector_width - 8 - i * 8)) & 0xFF
+            for i in range(0, self._bitvector_size // 8):
+                val = (vector >> (self._bitvector_size - 8 - i * 8)) & 0xFF
                 if val != 0:
-                    await self._bus.write(self._vectormap_base_addr + ord(c) * self._bitvector_bytes + i, val)
+                    await self._bus.write(self._vectormap_base_addr + ord(c) * self._bitvector_alignment + i, val)
 
         await self._bus.write(self.LENGTH_ADDR, len(search_word) - 1)
         await self._bus.write(self.CTRL_ADDR, self.ENABLE_FLAG)
@@ -228,10 +241,10 @@ class Accelerator(object):
         assert (ctrl & self.ENABLE_FLAG) == 0
 
         for c in vector_map.keys():
-            for i in range(0, self._bitvector_bytes):
-                val = (vector >> (self._bitvector_width - 8 - i * 8)) & 0xFF
+            for i in range(0, self._bitvector_size // 8):
+                val = (vector >> (self._bitvector_size - 8 - i * 8)) & 0xFF
                 if val != 0:
-                    await self._bus.write(self._vectormap_base_addr + ord(c) * self._bitvector_bytes + i, 0x00)
+                    await self._bus.write(self._vectormap_base_addr + ord(c) * self._bitvector_alignment + i, 0x00)
 
         distance = await self._bus.read(self.DISTANCE_ADDR)
 
