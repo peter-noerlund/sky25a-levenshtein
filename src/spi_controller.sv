@@ -64,21 +64,23 @@ module spi_controller
                 if (!ss_n) begin
                     sck <= ~sck;
                 end
-                if (ack_o) begin
-                    ack_o <= 1'b0;
-                end
                 if (sck) begin
                     if (bit_counter <= 6'd4) begin
                         mosi <= 1'b0;
-                    end else if (bit_counter == 6'd5) begin
+                    end
+                    if (bit_counter == 6'd5) begin
                         mosi <= 1'b1;
-                    end else if (bit_counter == 6'd6) begin
+                    end
+                    if (bit_counter == 6'd6) begin
                         mosi <= !we_i;                        
-                    end else if (bit_counter >= 6'd7 && bit_counter <= 6'd30) begin
+                    end
+                    if (bit_counter >= 6'd7 && bit_counter <= 6'd30) begin
                         mosi <= adr_i[5'd23 - 5'(bit_counter - 6'd7)];
-                    end else if (bit_counter >= 6'd31 && bit_counter <= 6'd38) begin
+                    end
+                    if (bit_counter >= 6'd31 && bit_counter <= 6'd38) begin
                         mosi <= dat_i[3'd7 - 3'(bit_counter - 6'd31)];
-                    end else if (bit_counter == 6'd39) begin
+                    end
+                    if (bit_counter == 6'd39) begin
                         ack_o <= 1'b1;
                         mosi <= 1'b0;
                         ss_n <= 1'b1;
@@ -89,9 +91,9 @@ module spi_controller
                 end
             end else begin
                 ack_o <= 1'b0;
-                ss_n <= 1'b1;
-                sck <= 1'b0;
-                bit_counter <= 6'd0;
+                ss_n <= 1'b1; // remove?
+                sck <= 1'b0; // remove?
+                bit_counter <= 6'd0; // remove?
             end
         end
     end
