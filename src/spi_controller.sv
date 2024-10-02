@@ -42,6 +42,8 @@ module spi_controller
     localparam CONFIG_CS2 = 2'd2;
     localparam CONFIG_CS3 = 2'd3;
 
+    logic [7:0] read_command;
+    logic [7:0] write_command;
     logic ss_n;
     logic [5:0] bit_counter;
     wire is_burst;
@@ -53,6 +55,8 @@ module spi_controller
     assign cs2_n = sram_config == CONFIG_CS2 ? ss_n : 1'b1;
     assign cs3_n = sram_config == CONFIG_CS3 ? ss_n : 1'b1;
     assign is_burst = !we_i && cti_i == CTI_INCREMENTING_BURST && bte_i == BTE_LINEAR;
+    assign read_command = 8'h03;
+    assign write_command = 8'h02;
 
     always @ (posedge clk_i) begin
         if (rst_i || !cyc_i || !stb_i) begin
@@ -65,19 +69,14 @@ module spi_controller
         end else begin
             if (bit_counter == 6'd0) begin
                 ss_n <= 1'b0;
+                sio_out[0] <= we_i ? write_command[7] : read_command[7];
             end
             if (!ss_n) begin
                 sck <= ~sck;
             end
             if (sck) begin
-                if (bit_counter <= 6'd4) begin
-                    sio_out[0] <= 1'b0;
-                end
-                if (bit_counter == 6'd5) begin
-                    sio_out[0] <= 1'b1;
-                end
-                if (bit_counter == 6'd6) begin
-                    sio_out[0] <= !we_i;                        
+                if (bit_counter <= 6'd6) begin
+                    sio_out[0] <= we_i ? write_command[6 - bit_counter] : read_command[6 - bit_counter];
                 end
                 if (bit_counter >= 6'd7 && bit_counter <= 6'd30) begin
                     sio_out[0] <= adr_i[5'd23 - 5'(bit_counter - 6'd7)];
