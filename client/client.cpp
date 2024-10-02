@@ -60,6 +60,11 @@ asio::awaitable<Client::Result> Client::search(std::string_view word)
     std::map<std::uint8_t, BitVector> vectorMap;
     for (auto c : word)
     {
+        if (vectorMap.contains(static_cast<std::uint8_t>(c)))
+        {
+            continue;
+        }
+
         BitVector vector(m_bitvectorSize);
         for (std::string_view::size_type i = 0; i != word.size(); ++i)
         {
@@ -75,7 +80,7 @@ asio::awaitable<Client::Result> Client::search(std::string_view word)
 
     for (auto [c, vector] : vectorMap)
     {
-        co_await m_bus.write(m_vectorMapAddress + static_cast<std::uint8_t>(c) * m_bitvectorSize / 8, std::as_bytes(vector.data()));
+        co_await m_bus.write(m_vectorMapAddress + static_cast<std::uint32_t>(c) * m_bitvectorSize / 8, std::as_bytes(vector.data()));
     }
 
     // Initiate search
@@ -100,7 +105,7 @@ asio::awaitable<Client::Result> Client::search(std::string_view word)
     // Clear bitvectors
     for (auto [c, vector] : vectorMap)
     {
-        co_await m_bus.write(m_vectorMapAddress + static_cast<std::uint32_t>(c) * m_bitvectorSize / 8, std::as_bytes(BitVector().data()));
+        co_await m_bus.write(m_vectorMapAddress + static_cast<std::uint32_t>(c) * m_bitvectorSize / 8, std::as_bytes(BitVector(m_bitvectorSize).data()));
     }
 
     co_return result;
