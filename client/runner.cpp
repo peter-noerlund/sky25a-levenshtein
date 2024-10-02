@@ -72,7 +72,7 @@ void Runner::run(const Config& config)
 
     SpiBus bus(*spi);
 
-    Client client(*context, bus, 16);
+    Client client(*context, bus);
 
     asio::co_spawn(ioContext, run(ioContext, *context, client, config), asio::detached);
 

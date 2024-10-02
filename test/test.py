@@ -141,21 +141,23 @@ class Accelerator(object):
     CTRL_ADDR = 0
     SRAM_CTRL_ADDR = 1
     LENGTH_ADDR = 2
-    DISTANCE_ADDR = 3
+    MAX_LENGTH_ADDR = 3
     INDEX_ADDR = 4
+    DISTANCE_ADDR = 6
 
     ENABLE_FLAG = 1
 
-    def __init__(self, bus, bitvector_width = 16):
+    def __init__(self, bus):
         self._bus = bus
-        self._bitvector_width = bitvector_width
-        self._bitvector_bytes = bitvector_width // 8
+
+    async def init(self, sram_select: int):
+        self._bitvector_width = await self._bus.read(self.MAX_LENGTH_ADDR) + 1
+        self._bitvector_bytes = self._bitvector_width // 8
 
         vectormap_size = 256 * self._bitvector_bytes
         self._vectormap_base_addr = vectormap_size
         self._dictionary_base_addr = vectormap_size * 2
 
-    async def init(self, sram_select: int):
         await self._bus.write(self.SRAM_CTRL_ADDR, sram_select)
         for i in range(0, 256 * self._bitvector_bytes):
             await self._bus.write(self._vectormap_base_addr + i, 0)
@@ -263,7 +265,7 @@ async def test_project(dut):
 
     #uart = Uart(dut)
     wishbone = SPIWishbone(dut, period=80, period_units="ns")
-    accel = Accelerator(wishbone, bitvector_width=16)
+    accel = Accelerator(wishbone)
 
 
     dictionary = ["h", "he", "hes", "hest", "heste", "hesten"]

@@ -59,15 +59,18 @@ As indicated by the SPI protocol, the address space is 23 bits.
 
 The address space is basically as follows:
 
-| Address  | Size | Access | Identifier  |
-|----------|------|--------|-------------|
-| 0x000000 | 1    | R/W    | `CTRL`      |
-| 0x000001 | 1    | R/W    | `SRAM_CTRL` |
-| 0x000002 | 1    | R/W    | `LENGTH`    |
-| 0x000003 | 1    | R/O    | `DISTANCE`  |
-| 0x000004 | 2    | R/O    | `INDEX`     |
-| 0x000200 | 512  | R/W    | `VECTORMAP` |
-| 0x000400 | 8M   | R/W    | `DICT`      |
+| Address   | Size | Access | Identifier   |
+|-----------|------|--------|--------------|
+| 0x000000  | 1    | R/W    | `CTRL`       |
+| 0x000001  | 1    | R/W    | `SRAM_CTRL`  |
+| 0x000002  | 1    | R/W    | `LENGTH`     |
+| 0x000003  | 1    | R/O    | `MAX_LENGTH` |
+| 0x000004  | 2    | R/O    | `INDEX`      |
+| 0x000006  | 1    | R/O    | `DISTANCE`   |
+| 0x000200¹ | 512  | R/W    | `VECTORMAP`  |
+| 0x000400¹ | 8M   | R/W    | `DICT`       |
+
+¹ The actual address is determined by the `MAX_LENGTH` field.
 
 **CTRL**
 
@@ -104,8 +107,18 @@ The chip select flag controls which chip select is used on the PMOD when accessi
 
 | Bits | Size | Access | Description                                                 |
 |------|------|--------|-------------------------------------------------------------|
-| 0-3  | 4    | R/W    | Word length minus 1                                         |
-| 4-7  | 4    | R/O    | Not used                                                    |
+| 0-7  | 4    | R/W    | Word length minus 1                                         |
+
+Used to indicate the length of the search word. Note that the word cannot be empty and it cannot
+exceed the value indicated by `MAX_LENGTH` (Currently 16)
+
+**MAX_LENGTH**
+
+| Bits | Size | Access | Description                       |
+|------|------|--------|-----------------------------------|
+| 0-7  | 8    | R/O    | Max word length supported minus 1 |
+
+This field allows for applications to dynamically detect the size of the bit vector.
 
 **DISTANCE**
 
@@ -118,6 +131,10 @@ When the engine has finished executing, this address contains the index of the b
 **VECTORMAP**
 
 The vector map must contain the corresponding bitvector for each input byte in the alphabet.
+
+The size of the bitvectors are determined by the `MAX_LENGTH` field (which is 16).
+
+The actual address of the vectormap is really determined by the calculation `256 * MAX_LENGTH / 8` (Which is `512` or `0x200`),
 
 If the search word is `application`, the bit vectors will look as follows:
 
@@ -139,6 +156,8 @@ Since each vector is 16-bit, the corresponding address is `0x200 + index * 2`
 
 The word list.
 
+The actual address of the word list is really determined by the calculation `512 * MAX_LENGTH / 8` (Which is `1024` or `0x400`),
+
 The word list is stored of a sequence of words, each encoded as a sequence of 8-bit characters and terminated by the byte value `0x00`. The list itself is terminated with the byte value `0x01`.
 
 Note that the algorithm doesn't care about the particular characters. It only cares if they are identical or not, so even though the algorithm doesn't support UTF-8 and is limited to a character set of 254 characters,
@@ -158,10 +177,10 @@ Next, you can run the test tool:
 
 ```sh
 # Machdyne QQSPI PSRAM
-./build/client/client --device tt09 --cs cs --test
+./build/client/client --device tt --cs cs --test
 
 # mole99 PSRAM
-./build/client/client --device tt09 --cs cs2 --test
+./build/client/client --device tt --cs cs2 --test
 ```
 
 This will load 1024 words of random length and characters into the SRAM and then perform a bunch of searches, verifying that the returned result is correct.
@@ -175,4 +194,4 @@ To operate, the device needs an QSPI PSRAM PMOD. The design is tested with the Q
 * 24-bit addresses
 * Uses pin 0, 6, or 7 for `SS#`.
 
-Note that this makes it incompatible with the spi-ram-emu project for the RP2040, as it uses a 16-bit address
+Note that this makes it incompatible with the spi-ram-emu project for the RP2040.

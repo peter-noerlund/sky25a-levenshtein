@@ -14,17 +14,18 @@
 namespace tt09_levenshtein
 {
 
-Client::Client(Context& context, Bus& bus, unsigned int bitvectorSize) noexcept
+Client::Client(Context& context, Bus& bus) noexcept
     : m_context(context)
     , m_bus(bus)
-    , m_bitvectorSize(bitvectorSize)
-    , m_vectorMapAddress(256 * bitvectorSize / 8)
-    , m_dictionaryAddress(m_vectorMapAddress * 2)
 {
 }
 
 asio::awaitable<void> Client::init(ChipSelect memoryChipSelect)
 {
+    m_bitvectorSize = static_cast<unsigned int>(co_await readByte(MaxLengthAddress)) + 1;
+    m_vectorMapAddress = 256 * m_bitvectorSize / 8;
+    m_dictionaryAddress = m_vectorMapAddress * 2;
+  
     co_await writeByte(SRAMControlAddress, static_cast<std::uint8_t>(memoryChipSelect));
     for (unsigned int i = 0; i != 256 * m_bitvectorSize / 8; ++i)
     {

@@ -32,7 +32,7 @@ public:
         CS3 = 3
     };
     
-    explicit Client(Context& context, Bus& bus, unsigned int bitvectorSize=16) noexcept;
+    explicit Client(Context& context, Bus& bus) noexcept;
 
     constexpr unsigned int bitvectorSize() const noexcept
     {
@@ -106,8 +106,9 @@ private:
         ControlAddress          = 0x000000,
         SRAMControlAddress      = 0x000001,
         LengthAddress           = 0x000002,
-        DistanceAddress         = 0x000003,
-        IndexAddress            = 0x000004
+        MaxLengthAddress        = 0x000003,
+        IndexAddress            = 0x000004,
+        DistanceAddress         = 0x000006
     };
 
     enum SpecialChars : std::uint8_t
@@ -123,9 +124,9 @@ private:
 
     Context& m_context;
     Bus& m_bus;
-    unsigned int m_bitvectorSize;
-    std::uint32_t m_vectorMapAddress;
-    std::uint32_t m_dictionaryAddress;
+    unsigned int m_bitvectorSize = 0;
+    std::uint32_t m_vectorMapAddress = 0;
+    std::uint32_t m_dictionaryAddress = 0;
 };
 
 } // namespace tt09_levenshtein

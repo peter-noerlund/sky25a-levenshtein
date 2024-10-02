@@ -65,10 +65,11 @@ module levenshtein_controller
     localparam ADDR_CTRL = 3'd0;
     localparam ADDR_SRAM_CTRL = 3'd1;
     localparam ADDR_LENGTH = 3'd2;
-    localparam ADDR_DISTANCE = 3'd3;
+    localparam ADDR_MAX_LENGTH = 3'd3;
     localparam ADDR_INDEX_HI = 3'd4;
     localparam ADDR_INDEX_LO = 3'd5;
-
+    localparam ADDR_DISTANCE = 3'd6;
+    
     localparam WORD_TERMINATOR = 8'h00;
     localparam DICT_TERMINATOR = 8'h01;
 
@@ -147,9 +148,10 @@ module levenshtein_controller
             ADDR_CTRL: wbs_dat_o = {7'b0000000, enabled};
             ADDR_SRAM_CTRL: wbs_dat_o = {6'b000000, sram_config};
             ADDR_LENGTH: wbs_dat_o = 8'(word_length_reg);
-            ADDR_DISTANCE: wbs_dat_o = best_distance;
+            ADDR_MAX_LENGTH: wbs_dat_o = 8'(BITVECTOR_WIDTH - 1);
             ADDR_INDEX_HI: wbs_dat_o = best_idx[15:8];
             ADDR_INDEX_LO: wbs_dat_o = best_idx[7:0];
+            ADDR_DISTANCE: wbs_dat_o = best_distance;
             default: wbs_dat_o = 8'h00;
         endcase
     end
