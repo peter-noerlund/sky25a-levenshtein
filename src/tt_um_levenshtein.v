@@ -37,8 +37,8 @@ module tt_um_levenshtein
     wire sram_cyc;
     wire sram_stb;
     wire [22:0] sram_adr;
-    wire [7:0] sram_dwr;
     wire sram_we;
+    wire [7:0] sram_dwr;
     wire sram_ack;
     wire sram_err;
     wire sram_rty;
@@ -48,6 +48,8 @@ module tt_um_levenshtein
 
     /* verilator lint_off UNUSEDSIGNAL */
     wire sram_sel;
+    wire [2:0] sram_cti;
+    wire [1:0] sram_bte;
     /* verilator lint_on UNUSEDSIGNAL */
 
     wire ctrl_master_cyc;
@@ -74,6 +76,8 @@ module tt_um_levenshtein
     wire [7:0] ctrl_slave_drd;
     /* verilator lint_off UNUSEDSIGNAL */
     wire ctrl_slave_sel;
+    wire [2:0] ctrl_slave_cti;
+    wire [1:0] ctrl_slave_bte;
     /* verilator lint_on UNUSEDSIGNAL */
 
     spi_wishbone_bridge spi(
@@ -158,6 +162,8 @@ module tt_um_levenshtein
         .wbm0_we_i(spi_we),
         .wbm0_sel_i(1'b0),
         .wbm0_dat_i(spi_dwr),
+        .wbm0_cti_i(3'b000),
+        .wbm0_bte_i(2'b00),
         .wbm0_ack_o(spi_ack),
         .wbm0_err_o(spi_err),
         .wbm0_rty_o(spi_rty),
@@ -169,6 +175,8 @@ module tt_um_levenshtein
         .wbm1_we_i(ctrl_master_we),
         .wbm1_sel_i(1'b0),
         .wbm1_dat_i(ctrl_master_dwr),
+        .wbm1_cti_i(3'b000),
+        .wbm1_bte_i(2'b00),
         .wbm1_ack_o(ctrl_master_ack),
         .wbm1_err_o(ctrl_master_err),
         .wbm1_rty_o(ctrl_master_rty),
@@ -180,6 +188,8 @@ module tt_um_levenshtein
         .wbs0_we_o(ctrl_slave_we),
         .wbs0_sel_o(ctrl_slave_sel),
         .wbs0_dat_o(ctrl_slave_dwr),
+        .wbs0_cti_o(ctrl_slave_cti),
+        .wbs0_bte_o(ctrl_slave_bte),
         .wbs0_ack_i(ctrl_slave_ack),
         .wbs0_err_i(ctrl_slave_err),
         .wbs0_rty_i(ctrl_slave_rty),
@@ -191,6 +201,8 @@ module tt_um_levenshtein
         .wbs1_we_o(sram_we),
         .wbs1_sel_o(sram_sel),
         .wbs1_dat_o(sram_dwr),
+        .wbs1_cti_o(sram_cti),
+        .wbs1_bte_o(sram_bte),
         .wbs1_ack_i(sram_ack),
         .wbs1_err_i(sram_err),
         .wbs1_rty_i(sram_rty),
