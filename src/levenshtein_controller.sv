@@ -142,16 +142,23 @@ module levenshtein_controller
     end
 
     always_comb begin
-        case (wbs_adr_i[2:0])
-            ADDR_CTRL: wbs_dat_o = {7'b0000000, enabled};
-            ADDR_SRAM_CTRL: wbs_dat_o = {6'b000000, sram_config};
-            ADDR_LENGTH: wbs_dat_o = 8'(word_length_reg);
-            ADDR_MAX_LENGTH: wbs_dat_o = 8'(BITVECTOR_WIDTH - 1);
-            ADDR_INDEX_HI: wbs_dat_o = best_idx[15:8];
-            ADDR_INDEX_LO: wbs_dat_o = best_idx[7:0];
-            ADDR_DISTANCE: wbs_dat_o = best_distance;
-            default: wbs_dat_o = 8'h00;
-        endcase
+        if (wbs_adr_i[2:0] == ADDR_CTRL) begin
+            wbs_dat_o = {7'b0000000, enabled};
+        end else if (wbs_adr_i[2:0] == ADDR_SRAM_CTRL) begin
+            wbs_dat_o = {6'b000000, sram_config};
+        end else if (wbs_adr_i[2:0] == ADDR_LENGTH) begin
+            wbs_dat_o = 8'(word_length_reg);
+        end else if (wbs_adr_i[2:0] == ADDR_MAX_LENGTH) begin
+            wbs_dat_o = 8'(BITVECTOR_WIDTH - 1);
+        end else if (wbs_adr_i[2:0] == ADDR_INDEX_HI) begin
+            wbs_dat_o = best_idx[15:8];
+        end else if (wbs_adr_i[2:0] == ADDR_INDEX_LO) begin
+            wbs_dat_o = best_idx[7:0];
+        end else if (wbs_adr_i[2:0] == ADDR_DISTANCE) begin
+            wbs_dat_o = best_distance;
+        end else begin
+            wbs_dat_o = 8'h00;
+        end
     end
 
     always_ff @ (posedge clk_i) begin
