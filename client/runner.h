@@ -44,21 +44,23 @@ public:
     void run(const Config& config);
 
 private:
-    void readDictionary(const std::filesystem::path& path);
     asio::awaitable<void> run(asio::io_context& ioContext, Context& context, Client& client, const Config& config);
-    void mapDictionary();
+    asio::awaitable<void> init(Client& client);
+    void readDictionary(const std::filesystem::path& path);
+    void createCharset();
+    void mapDictionaryToCharset();
     asio::awaitable<void> loadDictionary(Client& client);
     asio::awaitable<void> verifyDictionary(Client& client);
     asio::awaitable<void> search(Client& client, const Config& config, std::string_view word);
     asio::awaitable<void> runTest(Client& client, const Config& config);
-    std::string mapString(std::string_view string) const;
+    std::string mapStringToCharset(std::string_view string) const;
 
     Device m_device;
     Client::ChipSelect m_memoryChipSelect;
     std::optional<std::filesystem::path> m_vcdPath;
     std::vector<std::string> m_dictionary;
     std::vector<std::string> m_mappedDictionary;
-    std::map<char32_t, char> m_mapping;
+    std::map<char32_t, char> m_charset;
 };
 
 } // namespace tt09_levenshtein

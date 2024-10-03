@@ -12,7 +12,7 @@ std::u32string Unicode::toUTF32(std::string_view string)
     auto unicodeString = icu::UnicodeString::fromUTF8(icu::StringPiece(string.data(), static_cast<std::int32_t>(string.size())));
     std::u32string buffer;
     buffer.resize(unicodeString.length());
-    UErrorCode ec;
+    UErrorCode ec = {};
     auto res = unicodeString.toUTF32(reinterpret_cast<UChar32*>(buffer.data()), static_cast<std::int32_t>(buffer.size()), ec);
     buffer.resize(res);
 

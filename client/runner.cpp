@@ -87,17 +87,16 @@ asio::awaitable<void> Runner::run(asio::io_context& ioContext, Context& context,
     {
         co_await context.init();
 
-        fmt::println("Initializing");
-        co_await client.init(m_memoryChipSelect);
+        co_await init(client);
 
         if (config.dictionaryPath)
         {
-            fmt::println("Reading dictionary {}", config.dictionaryPath->string());
             readDictionary(*config.dictionaryPath);
+            createCharset();
+            mapDictionaryToCharset();
 
             if (!config.noLoadDictionary)
             {
-                fmt::println("Loading dictionary");
                 co_await loadDictionary(client);
             }
         }
@@ -119,12 +118,21 @@ asio::awaitable<void> Runner::run(asio::io_context& ioContext, Context& context,
     ioContext.stop();
 }
 
+asio::awaitable<void> Runner::init(Client& client)
+{
+    fmt::println("Initializing device");
+    auto t1 = std::chrono::high_resolution_clock::now();
+    co_await client.init(m_memoryChipSelect);
+    auto t2 = std::chrono::high_resolution_clock::now();
+    fmt::println("Initialzied device in \033[36m{}\033[0m ms", std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count());
+}
+
 asio::awaitable<void> Runner::search(Client& client, const Config& config, std::string_view word)
 {
-    auto mappedWord = mapString(word);
+    auto mappedWord = mapStringToCharset(word);
 
     auto t1 = std::chrono::high_resolution_clock::now();
-    auto result = co_await client.search(word);
+    auto result = co_await client.search(mappedWord);
     auto t2 = std::chrono::high_resolution_clock::now();
 
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1);
@@ -152,7 +160,7 @@ asio::awaitable<void> Runner::search(Client& client, const Config& config, std::
             fmt::print(" [\033[31mINCORRECT\033[0m should have been \033[35m{}\033[0m]", distance);
         }
     }
-    fmt::println(" Search took {} ms", elapsed.count());
+    fmt::println(" Search took \033[36m{}\033[0m ms", elapsed.count());
 }
 
 asio::awaitable<void> Runner::runTest(Client& client, const Config& config)
@@ -171,8 +179,14 @@ asio::awaitable<void> Runner::runTest(Client& client, const Config& config)
 
     auto testDictionary = testSet.dictionaryWords();
     m_dictionary.assign(testDictionary.begin(), testDictionary.end());
+    
+    createCharset();
+    mapDictionaryToCharset();
     co_await loadDictionary(client);
-    co_await verifyDictionary(client);
+    if (config.verifyDictionary)
+    {   
+        co_await verifyDictionary(client);
+    }
 
     for (const auto& searchWord : testSet.searchWords())
     {
@@ -193,7 +207,6 @@ void Runner::readDictionary(const std::filesystem::path& path)
     }
 
     m_dictionary.clear();
-    m_mapping.clear();
 
     std::string line;
     while (std::getline(stream, line).good())
@@ -205,32 +218,41 @@ void Runner::readDictionary(const std::filesystem::path& path)
         }
 
         m_dictionary.emplace_back(word);
-
-        for (auto c : Unicode::toUTF32(word))
-        {
-            if (!m_mapping.contains(c))
-            {
-                // Note that 00 = end of word, 01 = end of dictionary and 02 = unknown character
-                if (m_mapping.size() == 256 - 3)
-                {
-                    throw std::out_of_range("Too many distinct characters in dictionary");
-                }
-                m_mapping[c] = static_cast<char>(m_mapping.size() + 3);
-            }
-        }
     }
 
     auto t2 = std::chrono::high_resolution_clock::now();
 
-    fmt::println("Read dictionary in {} ms", std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count());
+    fmt::println("Read dictionary in \033[36m{}\033[0m ms", std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count());
 }
 
-void Runner::mapDictionary()
+void Runner::createCharset()
 {
-    if (m_mappedDictionary.size() == m_dictionary.size())
+    fmt::println("Creating character set");
+    auto t1 = std::chrono::high_resolution_clock::now();
+    m_charset.clear();
+    for (const auto& word : m_dictionary)
     {
-        return;
+        for (auto c : Unicode::toUTF32(word))
+        {
+            if (!m_charset.contains(c))
+            {
+                // Note that 00 = end of word, 01 = end of dictionary and 02 = unknown character
+                if (m_charset.size() == 256 - 3)
+                {
+                    throw std::out_of_range("Too many distinct characters in dictionary");
+                }
+                m_charset[c] = static_cast<char>(m_charset.size() + 3);
+            }
+        }
     }
+    auto t2 = std::chrono::high_resolution_clock::now();
+
+    fmt::println("Created character set of {} characters in \033[36m{}\033[0m ms", m_charset.size(), std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count());
+}
+
+void Runner::mapDictionaryToCharset()
+{
+    m_mappedDictionary.clear();
 
     fmt::println("Mapping dictionary to character set");
 
@@ -239,37 +261,33 @@ void Runner::mapDictionary()
     m_mappedDictionary.reserve(m_dictionary.size());
     for (const auto& string : m_dictionary)
     {
-        m_mappedDictionary.push_back(mapString(string));
+        m_mappedDictionary.push_back(mapStringToCharset(string));
     }
     auto t2 = std::chrono::high_resolution_clock::now();
-    fmt::println("Mapping dictionary in {} ms", std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count());
+    fmt::println("Mapping dictionary in \033[36m{}\033[0m ms", std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count());
 }
 
 asio::awaitable<void> Runner::loadDictionary(Client& client)
 {
-    mapDictionary();
-
     fmt::println("Loading dictionary onto device");
     auto t1 = std::chrono::high_resolution_clock::now();
     co_await client.loadDictionary(m_mappedDictionary);
     auto t2 = std::chrono::high_resolution_clock::now();
-    fmt::println("Loaded dictionary in {} ms", std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count());
+    fmt::println("Loaded dictionary in \033[36m{}\033[0m ms", std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count());
 }
 
 asio::awaitable<void> Runner::verifyDictionary(Client& client)
 {
-    mapDictionary();
-
     fmt::println("Verifying dictionary");
     auto t1 = std::chrono::high_resolution_clock::now();
     co_await client.verifyDictionary(m_mappedDictionary);
     auto t2 = std::chrono::high_resolution_clock::now();
-    fmt::println("Verified dictionary in {} ms", std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count());
+    fmt::println("Verified dictionary in \033[36m{}\033[0m ms", std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count());
 }
 
-std::string Runner::mapString(std::string_view string) const
+std::string Runner::mapStringToCharset(std::string_view string) const
 {
-    if (m_mapping.empty())
+    if (m_charset.empty())
     {
         return std::string(string);
     }
@@ -280,8 +298,8 @@ std::string Runner::mapString(std::string_view string) const
     buffer.reserve(u32string.size());
     for (auto c : u32string)
     {
-        auto it = m_mapping.find(c);
-        buffer.push_back(it == m_mapping.end() ? char(2) : it->second);
+        auto it = m_charset.find(c);
+        buffer.push_back(it == m_charset.end() ? char(2) : it->second);
     }
 
     return buffer;
