@@ -8,6 +8,7 @@
 #include "spi.h"
 #include "spi_bus.h"
 #include "test_set.h"
+#include "unicode.h"
 #include "verilator_context.h"
 #include "verilator_spi.h"
 
@@ -19,6 +20,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <chrono>
 #include <cstdio>
 #include <exception>
 #include <fstream>
@@ -93,7 +95,7 @@ asio::awaitable<void> Runner::run(asio::io_context& ioContext, Context& context,
             fmt::println("Reading dictionary {}", config.dictionaryPath->string());
             readDictionary(*config.dictionaryPath);
 
-            if (!config.noLoad)
+            if (!config.noLoadDictionary)
             {
                 fmt::println("Loading dictionary");
                 co_await loadDictionary(client);
@@ -102,9 +104,7 @@ asio::awaitable<void> Runner::run(asio::io_context& ioContext, Context& context,
 
         if (!config.searchWord.empty())
         {
-            fmt::println("Searching for \"{}\"", config.searchWord);
-            auto result = co_await client.search(config.searchWord);
-            fmt::println("Best match is index {} ({}) with a distance of {}", result.index, result.index < m_dictionary.size() ? std::string_view(m_dictionary.at(result.index)) : std::string_view(), result.distance);
+            co_await search(client, config, config.searchWord);
         }
 
         if (config.runTest)
@@ -117,6 +117,42 @@ asio::awaitable<void> Runner::run(asio::io_context& ioContext, Context& context,
         fmt::println(stderr, "Caught exception: {}", exception.what());
     }
     ioContext.stop();
+}
+
+asio::awaitable<void> Runner::search(Client& client, const Config& config, std::string_view word)
+{
+    auto mappedWord = mapString(word);
+
+    auto t1 = std::chrono::high_resolution_clock::now();
+    auto result = co_await client.search(word);
+    auto t2 = std::chrono::high_resolution_clock::now();
+
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1);
+
+    fmt::print("Best match for \033[33m{}\033[0m is ", word);
+    if (result.index < m_dictionary.size())
+    {
+        fmt::print("\033[33m{}\033[0m", m_dictionary.at(result.index));
+    }
+    else
+    {
+        fmt::print("index \033[33m{}\033[0m", result.index);
+    }
+    fmt::print(" with a distance of \033[35m{}\033[0m.", result.distance);
+    
+    if (result.index < m_dictionary.size() && config.verifySearch)
+    {
+        auto distance = levenshtein(word, m_dictionary.at(result.index));
+        if (result.distance == distance)
+        {
+            fmt::print(" [\033[32mCORRECT\033[0m]");
+        }
+        else
+        {
+            fmt::print(" [\033[31mINCORRECT\033[0m should have been \033[35m{}\033[0m]", distance);
+        }
+    }
+    fmt::println(" Search took {} ms", elapsed.count());
 }
 
 asio::awaitable<void> Runner::runTest(Client& client, const Config& config)
@@ -133,36 +169,23 @@ asio::awaitable<void> Runner::runTest(Client& client, const Config& config)
 
     TestSet testSet(testConfig);
 
-    fmt::println("Loading dictionary of {} word(s)", config.testDictionarySize);
-    auto dictionaryWords = testSet.dictionaryWords();
-    co_await client.loadDictionary(dictionaryWords);
-
-    fmt::println("Verifying dictionary");
-    co_await client.verifyDictionary(dictionaryWords);
-
-    fmt::println("Searching for {} word(s)", config.testSearchCount);
+    auto testDictionary = testSet.dictionaryWords();
+    m_dictionary.assign(testDictionary.begin(), testDictionary.end());
+    co_await loadDictionary(client);
+    co_await verifyDictionary(client);
 
     for (const auto& searchWord : testSet.searchWords())
     {
-        auto result = co_await client.search(searchWord);
-        if (result.index >= dictionaryWords.size())
-        {
-            throw std::runtime_error(fmt::format("Result index out of range ({} >= {}). Search word was {}", result.index, dictionaryWords.size(), searchWord).c_str());
-        }
-
-        auto word = dictionaryWords[result.index];
-        auto distance = levenshtein(searchWord, word);
-        if (result.distance != distance)
-        {
-            throw std::runtime_error(fmt::format("Invalid distance. Got {}, expected {}. Search word was {}, result index was {} ({})", result.distance, distance, searchWord, result.index, word).c_str());
-        }
-
-        fmt::println("  {}: {} (distance {})", searchWord, word, result.distance);
+        co_await search(client, config, searchWord);
     }
 }
 
 void Runner::readDictionary(const std::filesystem::path& path)
 {
+    fmt::println("Reading dictionary: {}", path.string());
+
+    auto t1 = std::chrono::high_resolution_clock::now();
+
     std::ifstream stream(path.string().c_str());
     if (!stream.good())
     {
@@ -170,6 +193,7 @@ void Runner::readDictionary(const std::filesystem::path& path)
     }
 
     m_dictionary.clear();
+    m_mapping.clear();
 
     std::string line;
     while (std::getline(stream, line).good())
@@ -181,12 +205,86 @@ void Runner::readDictionary(const std::filesystem::path& path)
         }
 
         m_dictionary.emplace_back(word);
+
+        for (auto c : Unicode::toUTF32(word))
+        {
+            if (!m_mapping.contains(c))
+            {
+                // Note that 00 = end of word, 01 = end of dictionary and 02 = unknown character
+                if (m_mapping.size() == 256 - 3)
+                {
+                    throw std::out_of_range("Too many distinct characters in dictionary");
+                }
+                m_mapping[c] = static_cast<char>(m_mapping.size() + 3);
+            }
+        }
     }
+
+    auto t2 = std::chrono::high_resolution_clock::now();
+
+    fmt::println("Read dictionary in {} ms", std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count());
+}
+
+void Runner::mapDictionary()
+{
+    if (m_mappedDictionary.size() == m_dictionary.size())
+    {
+        return;
+    }
+
+    fmt::println("Mapping dictionary to character set");
+
+    auto t1 = std::chrono::high_resolution_clock::now();
+    m_mappedDictionary.clear();
+    m_mappedDictionary.reserve(m_dictionary.size());
+    for (const auto& string : m_dictionary)
+    {
+        m_mappedDictionary.push_back(mapString(string));
+    }
+    auto t2 = std::chrono::high_resolution_clock::now();
+    fmt::println("Mapping dictionary in {} ms", std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count());
 }
 
 asio::awaitable<void> Runner::loadDictionary(Client& client)
 {
-    co_await client.loadDictionary(m_dictionary);
+    mapDictionary();
+
+    fmt::println("Loading dictionary onto device");
+    auto t1 = std::chrono::high_resolution_clock::now();
+    co_await client.loadDictionary(m_mappedDictionary);
+    auto t2 = std::chrono::high_resolution_clock::now();
+    fmt::println("Loaded dictionary in {} ms", std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count());
+}
+
+asio::awaitable<void> Runner::verifyDictionary(Client& client)
+{
+    mapDictionary();
+
+    fmt::println("Verifying dictionary");
+    auto t1 = std::chrono::high_resolution_clock::now();
+    co_await client.verifyDictionary(m_mappedDictionary);
+    auto t2 = std::chrono::high_resolution_clock::now();
+    fmt::println("Verified dictionary in {} ms", std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count());
+}
+
+std::string Runner::mapString(std::string_view string) const
+{
+    if (m_mapping.empty())
+    {
+        return std::string(string);
+    }
+
+    auto u32string = Unicode::toUTF32(string);
+
+    std::string buffer;
+    buffer.reserve(u32string.size());
+    for (auto c : u32string)
+    {
+        auto it = m_mapping.find(c);
+        buffer.push_back(it == m_mapping.end() ? char(2) : it->second);
+    }
+
+    return buffer;
 }
 
 } // namespace tt09_levenshtein
