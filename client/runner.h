@@ -48,6 +48,7 @@ private:
     Device m_device;
     Client::ChipSelect m_memoryChipSelect;
     std::optional<std::filesystem::path> m_vcdPath;
+    std::vector<std::string> m_dictionary;
 };
 
 } // namespace tt09_levenshtein

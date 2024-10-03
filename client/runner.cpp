@@ -99,10 +99,8 @@ asio::awaitable<void> Runner::run(asio::io_context& ioContext, Context& context,
         if (!config.searchWord.empty())
         {
             fmt::println("Searching for \"{}\"", config.searchWord);
-
             auto result = co_await client.search(config.searchWord);
-
-            fmt::println("Search result for \"{}\": index={} distance={}", config.searchWord, result.index, result.distance);
+            fmt::println("Best match is index {} ({}) with a distance of {}", result.index, result.index < m_dictionary.size() ? std::string_view(m_dictionary.at(result.index)) : std::string_view(), result.distance);
         }
 
         if (config.runTest)
@@ -167,7 +165,7 @@ asio::awaitable<void> Runner::loadDictionary(Client& client, const std::filesyst
         throw std::runtime_error("Error opening dictionary");
     }
 
-    std::vector<std::string> words;
+    m_dictionary.clear();
 
     std::string line;
     while (std::getline(stream, line).good())
@@ -178,10 +176,10 @@ asio::awaitable<void> Runner::loadDictionary(Client& client, const std::filesyst
             word.remove_suffix(1);
         }
 
-        words.emplace_back(word);
+        m_dictionary.emplace_back(word);
     }
 
-    co_await client.loadDictionary(words);
+    co_await client.loadDictionary(m_dictionary);
 }
 
 } // namespace tt09_levenshtein
