@@ -28,7 +28,7 @@ public:
         Device device = Device::Verilator;
         std::optional<std::filesystem::path> dictionaryPath;
         std::string searchWord;
-        bool noInit = false;
+        bool noLoad = false;
         bool runTest = false;
         unsigned int testAlphabetSize = 6;
         unsigned int testDictionarySize = 1024;
@@ -41,8 +41,9 @@ public:
     void run(const Config& config);
 
 private:
+    void readDictionary(const std::filesystem::path& path);
     asio::awaitable<void> run(asio::io_context& ioContext, Context& context, Client& client, const Config& config);
-    asio::awaitable<void> loadDictionary(Client& client, const std::filesystem::path& path);
+    asio::awaitable<void> loadDictionary(Client& client);
     asio::awaitable<void> runTest(Client& client, const Config& config);
 
     Device m_device;

@@ -13,18 +13,18 @@
 int main(int argc, char** argv)
 {
     bool showHelp = false;
-    std::string deviceName = "verilog";
+    std::string interfaceName = "verilog";
     std::string chipSelectName = "cs";
     std::optional<std::filesystem::path> vcdPath;
     tt09_levenshtein::Runner::Config config;
 
     auto cli = lyra::cli()
-        | lyra::opt(deviceName, "DEVICE")["-d"]["--device"]("Device type").choices("verilator", "icestick")
+        | lyra::opt(interfaceName, "DEVICE")["-i"]["--interface"]("Interface").choices("verilator", "icestick")
         | lyra::opt(chipSelectName, "PIN")["-c"]["--chip-select"]("Memory chip select pin").choices("cs", "cs2", "cs3")
         | lyra::opt(vcdPath, "FILE")["-v"]["--vcd-file"]("Create VCD file")
-        | lyra::opt(config.dictionaryPath, "FILE")["-l"]["--load-dictionary"]("Load dictionary")
+        | lyra::opt(config.dictionaryPath, "FILE")["-d"]["--dictionary"]("Dictionary")
+        | lyra::opt(config.noLoad)["--no-load"]("Skip loading dictionary")
         | lyra::opt(config.searchWord, "WORD")["-s"]["--search"]("Search for word")
-        | lyra::opt(config.noInit)["--no-init"]("Skip initialization")
         | lyra::opt(config.runTest)["-t"]["--test"]("Run test")
         | lyra::opt(config.testAlphabetSize, "NUM")["--test-alphabet-size"]("Test alphabet size")
         | lyra::opt(config.testDictionarySize, "NUM")["--test-dictionary-size"]("Test dictionary size")
@@ -44,7 +44,7 @@ int main(int argc, char** argv)
     }
 
     tt09_levenshtein::Runner::Device device;
-    if (deviceName == "icestick")
+    if (interfaceName == "icestick")
     {
         device = tt09_levenshtein::Runner::Device::Icestick;
     }

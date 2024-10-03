@@ -84,16 +84,20 @@ asio::awaitable<void> Runner::run(asio::io_context& ioContext, Context& context,
     try
     {
         co_await context.init();
-        if (!config.noInit)
-        {
-            fmt::println("Initializing");
-            co_await client.init(m_memoryChipSelect);
-        }
+
+        fmt::println("Initializing");
+        co_await client.init(m_memoryChipSelect);
 
         if (config.dictionaryPath)
         {
-            fmt::println("Loading dictionary {}", config.dictionaryPath->string());
-            co_await loadDictionary(client, *config.dictionaryPath);
+            fmt::println("Reading dictionary {}", config.dictionaryPath->string());
+            readDictionary(*config.dictionaryPath);
+
+            if (!config.noLoad)
+            {
+                fmt::println("Loading dictionary");
+                co_await loadDictionary(client);
+            }
         }
 
         if (!config.searchWord.empty())
@@ -157,12 +161,12 @@ asio::awaitable<void> Runner::runTest(Client& client, const Config& config)
     }
 }
 
-asio::awaitable<void> Runner::loadDictionary(Client& client, const std::filesystem::path& path)
+void Runner::readDictionary(const std::filesystem::path& path)
 {
     std::ifstream stream(path.string().c_str());
     if (!stream.good())
     {
-        throw std::runtime_error("Error opening dictionary");
+        throw std::runtime_error(fmt::format("Error opening dictionary: {}", path.string()));
     }
 
     m_dictionary.clear();
@@ -178,7 +182,10 @@ asio::awaitable<void> Runner::loadDictionary(Client& client, const std::filesyst
 
         m_dictionary.emplace_back(word);
     }
+}
 
+asio::awaitable<void> Runner::loadDictionary(Client& client)
+{
     co_await client.loadDictionary(m_dictionary);
 }
 
