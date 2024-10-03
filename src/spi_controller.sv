@@ -22,9 +22,7 @@ module spi_controller
         //! @virtualbus QSPI @dir output QSPI
         output logic sck,           //! Serial clock
         output logic [3:0] sio_out, //! Output pins (sio_out[0] is MOSI)
-        /* verilator lint_off UNUSEDSIGNAL */
         input wire [3:0] sio_in,    //! Input pins (sio_in[1] is MISO)
-        /* verilator lint_on UNUSEDSIGNAL */
         output logic [3:0] sio_oe,  //! Output enable
         
         output wire cs_n,           //! Primary CS pin
