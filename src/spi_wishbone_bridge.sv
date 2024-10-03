@@ -57,26 +57,30 @@ module spi_wishbone_bridge
             buffer <= 32'h00000000;
             cyc <= 1'b0;
         end else begin
-            if (state == STATE_COMMAND) begin
-                if (!last_sck && sck) begin
-                    buffer <= {buffer[30:0], mosi};
-                    if (counter == 5'd31) begin
-                        state <= STATE_WISHBONE;
-                        cyc <= 1'b1;
+            case (state)
+                STATE_COMMAND:
+                    if (!last_sck && sck) begin
+                        buffer <= {buffer[30:0], mosi};
+                        if (counter == 5'd31) begin
+                            state <= STATE_WISHBONE;
+                            cyc <= 1'b1;
+                        end
+                    end
+
+                STATE_WISHBONE: begin
+                    if (ack_i || err_i || rty_i) begin
+                        buffer[8:0] <= {1'b1, dat_i};
+                        cyc <= 1'b0;
+                        state <= STATE_RESPONSE;
                     end
                 end
-            end else if (state == STATE_WISHBONE) begin
-                if (ack_i || err_i || rty_i) begin
-                    buffer[8:0] <= {1'b1, dat_i};
-                    cyc <= 1'b0;
-                    state <= STATE_RESPONSE;
-                end
-            end else begin
-                if (!last_sck && sck) begin
-                    miso <= buffer[8];
-                    buffer[8:0] <= {buffer[7:0], 1'b0};
-                end
-            end
+
+                default:
+                    if (!last_sck && sck) begin
+                        miso <= buffer[8];
+                        buffer[8:0] <= {buffer[7:0], 1'b0};
+                    end
+            endcase
 
             if (!last_sck && sck) begin
                 counter <= counter + 5'd1;
