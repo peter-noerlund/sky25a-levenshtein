@@ -67,8 +67,8 @@ The address space is basically as follows:
 | 0x000003 | 1    | R/O    | `MAX_LENGTH` |
 | 0x000004 | 2    | R/O    | `INDEX`      |
 | 0x000006 | 1    | R/O    | `DISTANCE`   |
-| 0x000200 | 512  | R/W    | `VECTORMAP`  |
-| 0x000400 | 8M   | R/W    | `DICT`       |
+| 0x000400 | 768  | R/W    | `VECTORMAP`  |
+| 0x000800 | 8M   | R/W    | `DICT`       |
 
 **CTRL**
 
@@ -108,7 +108,7 @@ The chip select flag controls which chip select is used on the PMOD when accessi
 | 0-7  | 8    | R/W    | Word length minus 1                                         |
 
 Used to indicate the length of the search word. Note that the word cannot be empty and it cannot
-exceed the value indicated by `MAX_LENGTH` (Currently 16)
+exceed 20 characters.
 
 **MAX_LENGTH**
 
@@ -117,18 +117,6 @@ exceed the value indicated by `MAX_LENGTH` (Currently 16)
 | 0-7  | 8    | R/O    | Max word length supported minus 1 |
 
 This field allows for applications to dynamically detect the size of the bit vector.
-
-A generic client can calculate the addresses, sizes and alignments based on the `MAX_LENGTH` value.
-
-The bitvector size is equal the max word length, but stored as bytes in big endian order.
-
-The bitvector alignment is rounded up to either 1, 2, 4, 8, 16, or 32 depending on the bitvector size.
-
-The vector map size is equal to 256 times the bitvector alignment.
-
-The vector map address is equal to the vector map size.
-
-The dictionary address is equal to the vector map address + the vector map size.
 
 **DISTANCE**
 
@@ -144,19 +132,29 @@ The vector map must contain the corresponding bitvector for each input byte in t
 
 If the search word is `application`, the bit vectors will look as follows:
 
-| Letter | Index  | Bit vector                              |
-|--------|--------|-----------------------------------------|
-| `a`    | `0x61` | `16'b00000000_01000001` (`a_____a____`) |
-| `p`    | `0x70` | `16'b00000000_00000110` (`_pp________`) |
-| `l`    | `0x6C` | `16'b00000000_00001000` (`___l_______`) |
-| `i`    | `0x69` | `16'b00000001_00010000` (`____i___i__`) |
-| `c`    | `0x63` | `16'b00000000_00100000` (`_____c_____`) |
-| `t`    | `0x74` | `16'b00000000_10000000` (`_______t___`) |
-| `o`    | `0x6F` | `16'b00000010_00000000` (`_________o_`) |
-| `n`    | `0x6E` | `16'b00000100_00000000` (`__________n`) |
-| *      | *      | `16'b00000000_00000000` (`___________`) |
+| Letter | Index  | Bit vector                                   |
+|--------|--------|----------------------------------------------|
+| `a`    | `0x61` | `20'b0000_00000000_01000001` (`a_____a____`) |
+| `p`    | `0x70` | `20'b0000_00000000_00000110` (`_pp________`) |
+| `l`    | `0x6C` | `20'b0000_00000000_00001000` (`___l_______`) |
+| `i`    | `0x69` | `20'b0000_00000001_00010000` (`____i___i__`) |
+| `c`    | `0x63` | `20'b0000_00000000_00100000` (`_____c_____`) |
+| `t`    | `0x74` | `20'b0000_00000000_10000000` (`_______t___`) |
+| `o`    | `0x6F` | `20'b0000_00000010_00000000` (`_________o_`) |
+| `n`    | `0x6E` | `20'b0000_00000100_00000000` (`__________n`) |
+| *      | *      | `20'b0000_00000000_00000000` (`___________`) |
 
-Since each vector is 16-bit, the corresponding address is `0x200 + index * 2`
+Each vector represents 20 bits, stored as a 24-bit vector, aligned to 32 bits.
+
+Example based on the `application` bit vectors:
+
+| Address | Letter       | Bytes         |
+|---------|--------------|---------------|
+| 000584  | `a` (U+0061) | `x0 00 61 xx` |
+| 000588  | `b` (U+0062) | `x0 00 00 xx` |
+| 00058C  | `c` (U+0063) | `x0 00 20 xx` |
+
+The vectormap is stored in SRAM so the values are indetermined at power up and must be cleared.
 
 **DICT**
 
