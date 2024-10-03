@@ -124,7 +124,7 @@ asio::awaitable<void> Runner::init(Client& client)
     auto t1 = std::chrono::high_resolution_clock::now();
     co_await client.init(m_memoryChipSelect);
     auto t2 = std::chrono::high_resolution_clock::now();
-    fmt::println("Initialzied device in \033[36m{}\033[0m ms", std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count());
+    fmt::println("Initialized device in \033[36m{}\033[0m ms", std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count());
 }
 
 asio::awaitable<void> Runner::search(Client& client, const Config& config, std::string_view word)
