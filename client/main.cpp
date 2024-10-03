@@ -14,13 +14,13 @@ int main(int argc, char** argv)
 {
     bool showHelp = false;
     std::string deviceName = "verilog";
-    std::string chipSelectName = "None";
+    std::string chipSelectName = "cs";
     std::optional<std::filesystem::path> vcdPath;
     tt09_levenshtein::Runner::Config config;
 
     auto cli = lyra::cli()
         | lyra::opt(deviceName, "DEVICE")["-d"]["--device"]("Device type").choices("verilator", "icestick")
-        | lyra::opt(chipSelectName, "PIN")["-c"]["--chip-select"]("Memory chip select pin").choices("none", "cs", "cs2", "cs3")
+        | lyra::opt(chipSelectName, "PIN")["-c"]["--chip-select"]("Memory chip select pin").choices("cs", "cs2", "cs3")
         | lyra::opt(vcdPath, "FILE")["-v"]["--vcd-file"]("Create VCD file")
         | lyra::opt(config.dictionaryPath, "FILE")["-l"]["--load-dictionary"]("Load dictionary")
         | lyra::opt(config.searchWord, "WORD")["-s"]["--search"]("Search for word")
