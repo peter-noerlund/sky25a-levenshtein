@@ -1,17 +1,17 @@
-<!---
-
-This file is used to generate your project datasheet. Please fill in the information below and delete any unused
-sections.
-
-You can also include images in this folder and reference them in the markdown. Each image must be less than
-512 kb in size, and the combined size of all images must be less than 1 MB.
--->
-
 ## How it works
 
 tt09-levenshtein is a fuzzy search engine which can find the best matching word in a dictionary based on levenshtein distance.
 
 Fundamentally its an implementation of the bit-vector levenshtein algorithm from Heikki Hyyrö's 2022 paper with the title *A Bit-Vector Algorithm for Computing Levenshtein and Damerau Edit Distances*.
+
+### Architecture
+
+The overall architecture is a Wishbone Classic system with two masters (The levenshtein engine and an SPI controlled master) and two slaves (The levenshtein engine and a QSPI SRAM controller).
+
+Using the SPI interface, you store a dictionary and some bitvectors representing a search word in SRAM and then configures and activates the engine. The engine will then read the dictionary and bitvectors from the SRAM and,
+ultimately store the index and distance of the word in the dictionary with the lowest levenshtein distance in registers which can be read by the user.
+
+![image](design.png)
 
 ### SPI
 
@@ -51,7 +51,6 @@ Note that this means that the value `0x5A` can appear 8 different ways on the SP
 56 80   0 1 01011010 000000
 AD 00   1 01011010 00000000
 ```
-
 
 ### Memory Layout
 
@@ -195,5 +194,6 @@ To operate, the device needs an QSPI PSRAM PMOD. The design is tested with the Q
 * FAST READ QUAD with the command `0xE8` in 1S-4S-4S mode and 6 wait cycles
 * 24-bit addresses
 * Uses pin 0, 6, or 7 for `SS#`.
+* Must be able to run at half the clock speed of the chip.
 
 Note that this makes it incompatible with the spi-ram-emu project for the RP2040.
