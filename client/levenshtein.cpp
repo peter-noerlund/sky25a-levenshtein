@@ -6,7 +6,7 @@
 namespace tt09_levenshtein
 {
 
-unsigned int levenshtein(std::string_view s, std::string_view t) noexcept
+unsigned int levenshtein(std::u32string_view s, std::u32string_view t) noexcept
 {
 	auto m = s.size();
 	auto n = t.size();

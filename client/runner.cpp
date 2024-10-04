@@ -150,7 +150,7 @@ asio::awaitable<void> Runner::search(Client& client, const Config& config, std::
     
     if (result.index < m_dictionary.size() && config.verifySearch)
     {
-        auto distance = levenshtein(word, m_dictionary.at(result.index));
+        auto distance = levenshtein(Unicode::toUTF32(word), Unicode::toUTF32(m_dictionary.at(result.index)));
         if (result.distance == distance)
         {
             fmt::print(" [\033[32mCORRECT\033[0m]");
