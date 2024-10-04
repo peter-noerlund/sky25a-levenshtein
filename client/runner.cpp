@@ -264,7 +264,7 @@ void Runner::mapDictionaryToCharset()
         m_mappedDictionary.push_back(mapStringToCharset(string));
     }
     auto t2 = std::chrono::high_resolution_clock::now();
-    fmt::println("Mapping dictionary in \033[36m{}\033[0m ms", std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count());
+    fmt::println("Mapped dictionary in \033[36m{}\033[0m ms", std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count());
 }
 
 asio::awaitable<void> Runner::loadDictionary(Client& client)
