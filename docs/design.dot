@@ -24,6 +24,7 @@ digraph design {
         rank=same;
 
         interconnect [ label="Wishbone Interconnect" ];
+        arbiter [ label="Wishbone Arbiter" ];
     }
 
     subgraph engine {
@@ -34,7 +35,9 @@ digraph design {
 
     spi_master -> spi_wishbone_bridge;
     spi_wishbone_bridge -> interconnect;
-    interconnect -> spi_controller;
+    interconnect -> arbiter;
+    spi_controller -> arbiter [ dir="back" ];
     spi_controller -> psram;
-    interconnect -> levenshtein_controller [ dir="both" ];
+    interconnect -> levenshtein_controller;
+    arbiter -> levenshtein_controller [ dir="back" ];
 }
