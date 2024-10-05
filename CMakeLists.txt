@@ -52,6 +52,16 @@ add_custom_target(
 )
 
 add_custom_target(
+    create-summary
+    COMMAND . venv/bin/activate && tt/tt_tool.py --openlane2 --print-warnings > ${CMAKE_CURRENT_BINARY_DIR}/summary.md
+    COMMAND . venv/bin/activate && tt/tt_tool.py --openlane2 --print-stats >> ${CMAKE_CURRENT_BINARY_DIR}/summary.md
+    COMMAND . venv/bin/activate && tt/tt_tool.py --openlane2 --print-cell-summary >> ${CMAKE_CURRENT_BINARY_DIR}/summary.md
+    COMMAND . venv/bin/activate && tt/tt_tool.py --openlane2 --print-cell-category >> ${CMAKE_CURRENT_BINARY_DIR}/summary.md
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tt/tt_tool.py ${CMAKE_CURRENT_SOURCE_DIR}/venv/bin/python
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+add_custom_target(
     test
     COMMAND . ../venv/bin/activate && make -B
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tt/tt_tool.py ${CMAKE_CURRENT_SOURCE_DIR}/venv/bin/python
