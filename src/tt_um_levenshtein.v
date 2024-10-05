@@ -53,6 +53,19 @@ module tt_um_levenshtein
     wire [1:0] sram_bte;
     /* verilator lint_on UNUSEDSIGNAL */
 
+    wire shared_cyc;
+    wire shared_stb;
+    wire [22:0] shared_adr;
+    wire shared_we;
+    wire shared_sel;
+    wire [7:0] shared_dwr;
+    wire [2:0] shared_cti;
+    wire [1:0] shared_bte;
+    wire shared_ack;
+    wire shared_rty;
+    wire shared_err;
+    wire [7:0] shared_drd;
+
     wire ctrl_master_cyc;
     wire ctrl_master_stb;
     wire [22:0] ctrl_master_adr;
@@ -161,61 +174,88 @@ module tt_um_levenshtein
         .sram_config(sram_config)
     );
 
-
-    wb_interconnect #(.ADDR_WIDTH(23), .SLAVE0_ADDR_WIDTH(3)) intercon(
+    wb_arbiter #(.ADDR_WIDTH(23)) arbiter(
         .clk_i(clk),
         .rst_i(!rst_n),
 
-        .wbm0_cyc_i(spi_cyc),
-        .wbm0_stb_i(spi_stb),
-        .wbm0_adr_i(spi_adr),
-        .wbm0_we_i(spi_we),
-        .wbm0_sel_i(1'b0),
-        .wbm0_dat_i(spi_dwr),
-        .wbm0_cti_i(3'b000),
-        .wbm0_bte_i(2'b00),
-        .wbm0_ack_o(spi_ack),
-        .wbm0_err_o(spi_err),
-        .wbm0_rty_o(spi_rty),
-        .wbm0_dat_o(spi_drd),
+        .wbs0_cyc_i(spi_cyc),
+        .wbs0_stb_i(spi_stb),
+        .wbs0_adr_i(spi_adr),
+        .wbs0_we_i(spi_we),
+        .wbs0_sel_i(1'b0),
+        .wbs0_dat_i(spi_dwr),
+        .wbs0_cti_i(3'b000),
+        .wbs0_bte_i(2'b00),
+        .wbs0_ack_o(spi_ack),
+        .wbs0_err_o(spi_err),
+        .wbs0_rty_o(spi_rty),
+        .wbs0_dat_o(spi_drd),
 
-        .wbm1_cyc_i(ctrl_master_cyc),
-        .wbm1_stb_i(ctrl_master_stb),
-        .wbm1_adr_i(ctrl_master_adr),
-        .wbm1_we_i(ctrl_master_we),
-        .wbm1_sel_i(1'b0),
-        .wbm1_dat_i(ctrl_master_dwr),
-        .wbm1_cti_i(ctrl_master_cti),
-        .wbm1_bte_i(ctrl_master_bte),
-        .wbm1_ack_o(ctrl_master_ack),
-        .wbm1_err_o(ctrl_master_err),
-        .wbm1_rty_o(ctrl_master_rty),
-        .wbm1_dat_o(ctrl_master_drd),
+        .wbs1_cyc_i(ctrl_master_cyc),
+        .wbs1_stb_i(ctrl_master_stb),
+        .wbs1_adr_i(ctrl_master_adr),
+        .wbs1_we_i(ctrl_master_we),
+        .wbs1_sel_i(1'b0),
+        .wbs1_dat_i(ctrl_master_dwr),
+        .wbs1_cti_i(ctrl_master_cti),
+        .wbs1_bte_i(ctrl_master_bte),
+        .wbs1_ack_o(ctrl_master_ack),
+        .wbs1_err_o(ctrl_master_err),
+        .wbs1_rty_o(ctrl_master_rty),
+        .wbs1_dat_o(ctrl_master_drd),
 
-        .wbs0_cyc_o(ctrl_slave_cyc),
-        .wbs0_stb_o(ctrl_slave_stb),
-        .wbs0_adr_o(ctrl_slave_adr),
-        .wbs0_we_o(ctrl_slave_we),
-        .wbs0_sel_o(ctrl_slave_sel),
-        .wbs0_dat_o(ctrl_slave_dwr),
-        .wbs0_cti_o(ctrl_slave_cti),
-        .wbs0_bte_o(ctrl_slave_bte),
-        .wbs0_ack_i(ctrl_slave_ack),
-        .wbs0_err_i(ctrl_slave_err),
-        .wbs0_rty_i(ctrl_slave_rty),
-        .wbs0_dat_i(ctrl_slave_drd),
+        .wbm_cyc_o(shared_cyc),
+        .wbm_stb_o(shared_stb),
+        .wbm_adr_o(shared_adr),
+        .wbm_we_o(shared_we),
+        .wbm_sel_o(shared_sel),
+        .wbm_dat_o(shared_dwr),
+        .wbm_cti_o(shared_cti),
+        .wbm_bte_o(shared_bte),
+        .wbm_ack_i(shared_ack),
+        .wbm_rty_i(shared_rty),
+        .wbm_err_i(shared_err),
+        .wbm_dat_i(shared_drd)
+    );
 
-        .wbs1_cyc_o(sram_cyc),
-        .wbs1_stb_o(sram_stb),
-        .wbs1_adr_o(sram_adr),
-        .wbs1_we_o(sram_we),
-        .wbs1_sel_o(sram_sel),
-        .wbs1_dat_o(sram_dwr),
-        .wbs1_cti_o(sram_cti),
-        .wbs1_bte_o(sram_bte),
-        .wbs1_ack_i(sram_ack),
-        .wbs1_err_i(sram_err),
-        .wbs1_rty_i(sram_rty),
-        .wbs1_dat_i(sram_drd)
+    wb_interconnect #(.ADDR_WIDTH(23)) intercon(
+        .wbs_cyc_i(shared_cyc),
+        .wbs_stb_i(shared_stb),
+        .wbs_adr_i(shared_adr),
+        .wbs_we_i(shared_we),
+        .wbs_sel_i(shared_sel),
+        .wbs_dat_i(shared_dwr),
+        .wbs_cti_i(shared_cti),
+        .wbs_bte_i(shared_bte),
+        .wbs_ack_o(shared_ack),
+        .wbs_rty_o(shared_rty),
+        .wbs_err_o(shared_err),
+        .wbs_dat_o(shared_drd),
+
+        .wbm0_cyc_o(ctrl_slave_cyc),
+        .wbm0_stb_o(ctrl_slave_stb),
+        .wbm0_adr_o(ctrl_slave_adr),
+        .wbm0_we_o(ctrl_slave_we),
+        .wbm0_sel_o(ctrl_slave_sel),
+        .wbm0_dat_o(ctrl_slave_dwr),
+        .wbm0_cti_o(ctrl_slave_cti),
+        .wbm0_bte_o(ctrl_slave_bte),
+        .wbm0_ack_i(ctrl_slave_ack),
+        .wbm0_rty_i(ctrl_slave_rty),
+        .wbm0_err_i(ctrl_slave_err),
+        .wbm0_dat_i(ctrl_slave_drd),
+
+        .wbm1_cyc_o(sram_cyc),
+        .wbm1_stb_o(sram_stb),
+        .wbm1_adr_o(sram_adr),
+        .wbm1_we_o(sram_we),
+        .wbm1_sel_o(sram_sel),
+        .wbm1_dat_o(sram_dwr),
+        .wbm1_cti_o(sram_cti),
+        .wbm1_bte_o(sram_bte),
+        .wbm1_ack_i(sram_ack),
+        .wbm1_rty_i(sram_rty),
+        .wbm1_err_i(sram_err),
+        .wbm1_dat_i(sram_drd)
     );
 endmodule

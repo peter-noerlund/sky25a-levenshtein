@@ -1,150 +1,99 @@
 `default_nettype none
 
+//! Interconnect
+//!
+//! This interconnect splits the bus into a small register space with reduced
+//! address space, and a larger space with the complete address range.
 module wb_interconnect
     #(
-        parameter ADDR_WIDTH=24,
-        parameter DATA_WIDTH=8,
-        parameter SLAVE0_ADDR_WIDTH=3,
-        parameter SEL_WIDTH=DATA_WIDTH / 8
+        parameter ADDR_WIDTH=24,                    //! Address width
+        parameter DATA_WIDTH=8,                     //! Data width
+        parameter SHARED_BUS=1,                     // 
+        parameter SLAVE0_ADDR_WIDTH=3,              //! Number of address bits for slave 0
+        parameter SEL_WIDTH=(DATA_WIDTH + 7) / 8    //! Number of sel bits (Calculated automatically)
     )
     (
-        input wire clk_i,
-        input wire rst_i,
-
-        //! @virtualbus WBM0 @dir in Wishbone Master 0
-        input wire wbm0_cyc_i,                          //! Cycle
-        input wire wbm0_stb_i,                          //! Strobe
-        input wire [ADDR_WIDTH - 1 : 0] wbm0_adr_i,     //! Address
-        input wire wbm0_we_i,                           //! Write Enable
-        input wire [SEL_WIDTH - 1 : 0] wbm0_sel_i,      //! Write Select
-        input wire [DATA_WIDTH - 1 : 0] wbm0_dat_i,     //! Data In
-        input wire [2:0] wbm0_cti_i,                    //! Cycle Type Indicator
-        input wire [1:0] wbm0_bte_i,                    //! Burst Type Extension
-        output wire wbm0_ack_o,                         //! Acknowledge
-        output wire wbm0_err_o,                         //! Error
-        output wire wbm0_rty_o,                         //! Retry
-        output wire [DATA_WIDTH - 1 : 0] wbm0_dat_o,    //! Data Out
+        //! @virtualbus WBM @dir in Wishbone Slave Port
+        input wire wbs_cyc_i,                          //! Cycle
+        input wire wbs_stb_i,                          //! Strobe
+        input wire [ADDR_WIDTH - 1 : 0] wbs_adr_i,     //! Address
+        input wire wbs_we_i,                           //! Write Enable
+        input wire [SEL_WIDTH - 1 : 0] wbs_sel_i,      //! Write Select
+        input wire [DATA_WIDTH - 1 : 0] wbs_dat_i,     //! Data In
+        input wire [2:0] wbs_cti_i,                    //! Cycle Type Indicator
+        input wire [1:0] wbs_bte_i,                    //! Burst Type Extension
+        output logic wbs_ack_o,                         //! Acknowledge
+        output logic wbs_err_o,                         //! Error
+        output logic wbs_rty_o,                         //! Retry
+        output wire [DATA_WIDTH - 1 : 0] wbs_dat_o,    //! Data Out
         //! @end
 
-        //! @virtualbus WBM1 @dir in Wishbone Master 1
-        input wire wbm1_cyc_i,                          //! Cycle
-        input wire wbm1_stb_i,                          //! Strobe
-        input wire [ADDR_WIDTH - 1 : 0] wbm1_adr_i,     //! Address
-        input wire wbm1_we_i,                           //! Write Enable
-        input wire [SEL_WIDTH - 1 : 0] wbm1_sel_i,      //! Write Select
-        input wire [DATA_WIDTH - 1 : 0] wbm1_dat_i,     //! Data In
-        input wire [2:0] wbm1_cti_i,                    //! Cycle Type Indicator
-        input wire [1:0] wbm1_bte_i,                    //! Burst Type Extension
-        output wire wbm1_ack_o,                         //! Acknowledge
-        output wire wbm1_err_o,                         //! Error
-        output wire wbm1_rty_o,                         //! Retry
+        //! @virtualbus WBS0 @dir out Wishbone Master Port 0
+        output logic wbm0_cyc_o,                                 //! Cycle
+        output logic wbm0_stb_o,                                 //! Strobe
+        output wire [SLAVE0_ADDR_WIDTH - 1 : 0] wbm0_adr_o,     //! Address
+        output wire wbm0_we_o,                                  //! Write Enable
+        output wire [SEL_WIDTH - 1 : 0] wbm0_sel_o,             //! Write Select
+        output wire [DATA_WIDTH - 1 : 0] wbm0_dat_o,            //! Data Out
+        output wire [2:0] wbm0_cti_o,                           //! Cycle Type Indicator
+        output wire [1:0] wbm0_bte_o,                           //! Burst Type Extension
+        input wire wbm0_ack_i,                                  //! Acknowledge
+        input wire wbm0_err_i,                                  //! Error
+        input wire wbm0_rty_i,                                  //! Retry
+        input wire [DATA_WIDTH - 1 : 0] wbm0_dat_i,             //! Data In
+        //! @end
+
+        //! @virtualbus WBS1 @dir out Wishbone Master Port 1
+        output logic wbm1_cyc_o,                         //! Cycle
+        output logic wbm1_stb_o,                         //! Strobe
+        output wire [ADDR_WIDTH - 1 : 0] wbm1_adr_o,    //! Address
+        output wire wbm1_we_o,                          //! Write Enable
+        output wire [SEL_WIDTH - 1 : 0] wbm1_sel_o,     //! Write Select
         output wire [DATA_WIDTH - 1 : 0] wbm1_dat_o,    //! Data Out
-        //! @end
-
-        //! @virtualbus WBS0 @dir out Wishbone Slave 0
-        output wire wbs0_cyc_o,                         //! Cycle
-        output wire wbs0_stb_o,                         //! Strobe
-        output wire [SLAVE0_ADDR_WIDTH - 1 : 0] wbs0_adr_o,    //! Address
-        output wire wbs0_we_o,                          //! Write Enable
-        output wire [SEL_WIDTH - 1 : 0] wbs0_sel_o,     //! Write Select
-        output wire [DATA_WIDTH - 1 : 0] wbs0_dat_o,    //! Data Out
-        output wire [2:0] wbs0_cti_o,                   //! Cycle Type Indicator
-        output wire [1:0] wbs0_bte_o,                   //! Burst Type Extension
-        input wire wbs0_ack_i,                          //! Acknowledge
-        input wire wbs0_err_i,                          //! Error
-        input wire wbs0_rty_i,                          //! Retry
-        input wire [DATA_WIDTH - 1 : 0] wbs0_dat_i,     //! Data In
-        //! @end
-
-        //! @virtualbus WBS1 @dir out Wishbone Slave 1
-        output wire wbs1_cyc_o,                         //! Cycle
-        output wire wbs1_stb_o,                         //! Strobe
-        output wire [ADDR_WIDTH - 1 : 0] wbs1_adr_o,    //! Address
-        output wire wbs1_we_o,                          //! Write Enable
-        output wire [SEL_WIDTH - 1 : 0] wbs1_sel_o,     //! Write Select
-        output wire [DATA_WIDTH - 1 : 0] wbs1_dat_o,    //! Data Out
-        output wire [2:0] wbs1_cti_o,                   //! Cycle Type Indicator
-        output wire [1:0] wbs1_bte_o,                   //! Burst Type Extension
-        input wire wbs1_ack_i,                          //! Acknowledge
-        input wire wbs1_err_i,                          //! Error
-        input wire wbs1_rty_i,                          //! Retry
-        input wire [DATA_WIDTH - 1 : 0] wbs1_dat_i      //! Data In
+        output wire [2:0] wbm1_cti_o,                   //! Cycle Type Indicator
+        output wire [1:0] wbm1_bte_o,                   //! Burst Type Extension
+        input wire wbm1_ack_i,                          //! Acknowledge
+        input wire wbm1_err_i,                          //! Error
+        input wire wbm1_rty_i,                          //! Retry
+        input wire [DATA_WIDTH - 1 : 0] wbm1_dat_i      //! Data In
         //! @end        
     );
 
-    wire gnt;
-    wire gnt0;
-    wire gnt1;
-
-    wire ack;
-    wire err;
-    wire rty;
-    wire [DATA_WIDTH - 1 : 0] drd;
-
-    wire cyc;
-    wire stb;
-    wire we;
-    wire [SEL_WIDTH - 1 : 0] sel;
-    wire [DATA_WIDTH - 1 : 0] dwr;
-    wire [ADDR_WIDTH - 1: 0] adr;
-    wire [2:0] cti;
-    wire [1:0] bte;
-
     localparam PREFIX_WIDTH = ADDR_WIDTH - SLAVE0_ADDR_WIDTH;
 
-    wire acmp0 = adr[ADDR_WIDTH - 1 : SLAVE0_ADDR_WIDTH] == PREFIX_WIDTH'(0);
+    wire acmp0 = wbs_adr_i[ADDR_WIDTH - 1 : SLAVE0_ADDR_WIDTH] == PREFIX_WIDTH'(0);
     wire acmp1 = !acmp0;
 
-    assign gnt0 = gnt == 0;
-    assign gnt1 = gnt == 1;
-
-    assign wbm0_ack_o = ack & gnt0;
-    assign wbm0_err_o = err & gnt0;
-    assign wbm0_rty_o = rty & gnt0;
-    assign wbm0_dat_o = drd;
-
-    assign wbm1_ack_o = ack & gnt1;
-    assign wbm1_err_o = err & gnt1;
-    assign wbm1_rty_o = rty & gnt1;
-    assign wbm1_dat_o = drd;
-
-    assign wbs0_cyc_o = cyc & acmp0;
-    assign wbs0_stb_o = stb & acmp0;
-    assign wbs0_adr_o = adr[SLAVE0_ADDR_WIDTH - 1 : 0];
-    assign wbs0_we_o = we;
-    assign wbs0_sel_o = sel;
-    assign wbs0_dat_o = dwr;
-    assign wbs0_cti_o = cti;
-    assign wbs0_bte_o = bte;
+    assign wbm0_stb_o = wbs_stb_i & acmp0;
+    assign wbm0_adr_o = wbs_adr_i[SLAVE0_ADDR_WIDTH - 1 : 0];
+    assign wbm0_we_o = wbs_we_i;
+    assign wbm0_sel_o = wbs_sel_i;
+    assign wbm0_dat_o = wbs_dat_i;
+    assign wbm0_cti_o = wbs_cti_i;
+    assign wbm0_bte_o = wbs_bte_i;
     
-    assign wbs1_cyc_o = cyc & acmp1;
-    assign wbs1_stb_o = stb & acmp1;
-    assign wbs1_adr_o = adr;
-    assign wbs1_we_o = we;
-    assign wbs1_sel_o = sel;
-    assign wbs1_dat_o = dwr;
-    assign wbs1_cti_o = cti;
-    assign wbs1_bte_o = bte;
+    assign wbm1_stb_o = wbs_stb_i & acmp1;
+    assign wbm1_adr_o = wbs_adr_i;
+    assign wbm1_we_o = wbs_we_i;
+    assign wbm1_sel_o = wbs_sel_i;
+    assign wbm1_dat_o = wbs_dat_i;
+    assign wbm1_cti_o = wbs_cti_i;
+    assign wbm1_bte_o = wbs_bte_i;
+    assign wbs_dat_o = acmp0 ? wbm0_dat_i : wbm1_dat_i;
 
-    assign ack = wbs0_ack_i || wbs1_ack_i;
-    assign err = wbs0_err_i || wbs1_err_i;
-    assign rty = wbs0_rty_i || wbs1_rty_i;
-    assign drd = acmp0 ? wbs0_dat_i : wbs1_dat_i;
-
-    assign stb = gnt0 ? wbm0_stb_i : wbm1_stb_i;
-    assign adr = gnt0 ? wbm0_adr_i : wbm1_adr_i;
-    assign we = gnt0 ? wbm0_we_i : wbm1_we_i;
-    assign sel = gnt0 ? wbm0_sel_i : wbm1_sel_i;
-    assign dwr = gnt0 ? wbm0_dat_i : wbm1_dat_i;
-    assign cti = gnt0 ? wbm0_cti_i : wbm1_cti_i;
-    assign bte = gnt0 ? wbm0_bte_i : wbm1_bte_i;
-
-    wb_arbiter #(.MASTER_COUNT(2)) arbiter(
-        .clk_i(clk_i),
-        .rst_i(rst_i),
-
-        .cyc_i({wbm1_cyc_i, wbm0_cyc_i}),
-        .gnt_o(gnt),
-        .cyc_o(cyc)
-    );
+    always_comb begin
+        if (SHARED_BUS) begin
+            wbm0_cyc_o = wbs_cyc_i;
+            wbm1_cyc_o = wbs_cyc_i;
+            wbs_ack_o = wbm0_ack_i | wbm1_ack_i;
+            wbs_rty_o = wbm0_rty_i | wbm1_rty_i;
+            wbs_err_o = wbm0_err_i | wbm1_err_i;
+        end else begin
+            wbm0_cyc_o = wbs_cyc_i & acmp0;
+            wbm1_cyc_o = wbs_cyc_i & acmp1;
+            wbs_ack_o = acmp0 ? wbm0_ack_i : wbm1_ack_i;
+            wbs_rty_o = acmp0 ? wbm0_rty_i : wbm1_rty_i;
+            wbs_err_o = acmp0 ? wbm0_err_i : wbm1_err_i;
+        end
+    end
 endmodule
