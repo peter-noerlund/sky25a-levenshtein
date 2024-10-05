@@ -29,6 +29,7 @@ public:
         Device device = Device::Verilator;
         std::optional<std::filesystem::path> dictionaryPath;
         std::string searchWord;
+        bool noClear = false;
         bool noLoadDictionary = false;
         bool runTest = false;
         bool verifyDictionary = false;
@@ -45,7 +46,7 @@ public:
 
 private:
     asio::awaitable<void> run(asio::io_context& ioContext, Context& context, Client& client, const Config& config);
-    asio::awaitable<void> init(Client& client);
+    asio::awaitable<void> init(Client& client, const Config& config);
     void readDictionary(const std::filesystem::path& path);
     void createCharset();
     void mapDictionaryToCharset();

@@ -39,7 +39,7 @@ public:
         return m_maxLength;
     }
 
-    asio::awaitable<void> init(ChipSelect memoryChipSelect);
+    asio::awaitable<void> init(ChipSelect memoryChipSelect, bool clearVectorMap = true);
     
     template<typename Container>
     asio::awaitable<void> loadDictionary(Container&& container)

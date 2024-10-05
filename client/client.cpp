@@ -20,7 +20,7 @@ Client::Client(Context& context, Bus& bus) noexcept
 {
 }
 
-asio::awaitable<void> Client::init(ChipSelect memoryChipSelect)
+asio::awaitable<void> Client::init(ChipSelect memoryChipSelect, bool clearVectorMap)
 {
     m_maxLength = static_cast<unsigned int>(co_await readByte(MaxLengthAddress)) + 1;
     m_bitvectorSize = ((m_maxLength + 7) / 8) * 8;
@@ -53,11 +53,14 @@ asio::awaitable<void> Client::init(ChipSelect memoryChipSelect)
   
     co_await writeByte(SRAMControlAddress, static_cast<std::uint8_t>(memoryChipSelect));
 
-    for (unsigned int i = 0; i != 256; ++i)
+    if (clearVectorMap)
     {
-        for (unsigned int j = 0; j != m_bitvectorSize / 8; ++j)
+        for (unsigned int i = 0; i != 256; ++i)
         {
-            co_await writeByte(m_vectorMapAddress + i * m_bitvectorAlignment + j, 0);
+            for (unsigned int j = 0; j != m_bitvectorSize / 8; ++j)
+            {
+                co_await writeByte(m_vectorMapAddress + i * m_bitvectorAlignment + j, 0);
+            }
         }
     }
 }

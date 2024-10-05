@@ -87,7 +87,7 @@ asio::awaitable<void> Runner::run(asio::io_context& ioContext, Context& context,
     {
         co_await context.init();
 
-        co_await init(client);
+        co_await init(client, config);
 
         if (config.dictionaryPath)
         {
@@ -123,11 +123,11 @@ asio::awaitable<void> Runner::run(asio::io_context& ioContext, Context& context,
     ioContext.stop();
 }
 
-asio::awaitable<void> Runner::init(Client& client)
+asio::awaitable<void> Runner::init(Client& client, const Config& config)
 {
     fmt::println("Initializing device");
     auto t1 = std::chrono::high_resolution_clock::now();
-    co_await client.init(m_memoryChipSelect);
+    co_await client.init(m_memoryChipSelect, !config.noClear);
     auto t2 = std::chrono::high_resolution_clock::now();
     fmt::println("Initialized device in \033[36m{}\033[0m ms", std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count());
 }
