@@ -99,6 +99,11 @@ asio::awaitable<void> Runner::run(asio::io_context& ioContext, Context& context,
             {
                 co_await loadDictionary(client);
             }
+
+            if (config.verifyDictionary)
+            {
+                co_await verifyDictionary(client);
+            }
         }
 
         if (!config.searchWord.empty())
