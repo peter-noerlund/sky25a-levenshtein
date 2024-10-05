@@ -174,7 +174,7 @@ module tt_um_levenshtein
         .sram_config(sram_config)
     );
 
-    wb_interconnect #(.ADDR_WIDTH(23), .SHARED_BUS(0)) intercon(
+    wb_interconnect #(.ADDR_WIDTH(23)) intercon(
         .wbs_cyc_i(spi_cyc),
         .wbs_stb_i(spi_stb),
         .wbs_adr_i(spi_adr),
