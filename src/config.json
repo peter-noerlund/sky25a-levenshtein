@@ -33,10 +33,6 @@
 
   "//": "Fix transition constraint",
   "MAX_TRANSITION_CONSTRAINT": 1.5,
-  "DESIGN_REPAIR_MAX_SLEW_PCT": 20,
-  "DESIGN_REPAIR_MAX_CAP_PCT": 20,
-  "DEFAULT_CORNER": "max_ss_100C_1v60",
-  "RUN_POST_GRT_DESIGN_REPAIR": false,
   
   "//": "Configuration docs: https://openlane.readthedocs.io/en/latest/reference/configuration.html",
 
