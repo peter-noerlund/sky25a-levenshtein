@@ -4,7 +4,8 @@ module levenshtein_controller
     #(
         parameter MASTER_ADDR_WIDTH=24,
         parameter SLAVE_ADDR_WIDTH=24,
-        parameter BITVECTOR_WIDTH=16
+        parameter BITVECTOR_WIDTH=16,
+        parameter BURST_SIZE=4
     )
     (
         input wire clk_i,
@@ -53,8 +54,12 @@ module levenshtein_controller
 
     localparam BITVECTOR_BYTES = (BITVECTOR_WIDTH + 7) / 8;
     localparam BITVECTOR_ADDR_SUFFIX_WIDTH = $clog2(BITVECTOR_BYTES);
-    localparam STATE_COUNT = 2 + BITVECTOR_BYTES;
-    localparam STATE_WIDTH = $clog2(STATE_COUNT);
+    localparam STATE_COUNT = 2 + BURST_SIZE + BITVECTOR_BYTES;
+    localparam STATE_WIDTH = $clog2(STATE_COUNT + 1);
+
+    localparam DICT_ADDR_SUFFIX_WIDTH = $clog2(BURST_SIZE);
+    localparam DICT_ADDR_WIDTH = MASTER_ADDR_WIDTH - DICT_ADDR_SUFFIX_WIDTH;
+    localparam SYMBOL_INDEX_WIDTH = DICT_ADDR_SUFFIX_WIDTH;
 
     localparam DISTANCE_WIDTH = 8;
     localparam ID_WIDTH = 16;
@@ -73,7 +78,8 @@ module levenshtein_controller
     localparam WORD_TERMINATOR = 8'h00;
     localparam DICT_TERMINATOR = 8'h01;
 
-    localparam DICT_ADDR = MASTER_ADDR_WIDTH'({10'b10_00000000, BITVECTOR_ADDR_SUFFIX_WIDTH'(0)});
+    localparam REAL_DICT_ADDR = MASTER_ADDR_WIDTH'({10'b10_00000000, BITVECTOR_ADDR_SUFFIX_WIDTH'(0)});
+    localparam DICT_ADDR = REAL_DICT_ADDR[MASTER_ADDR_WIDTH - 1 -: DICT_ADDR_WIDTH];
 
     logic enabled;
     logic [WORD_LENGTH_REG_WIDTH - 1 : 0] word_length_reg;
@@ -81,12 +87,13 @@ module levenshtein_controller
     wire [BITVECTOR_WIDTH - 1 : 0] initial_vp;
     wire [WORD_LENGTH_WIDTH - 1 : 0] word_length;
 
-    localparam STATE_READ_DICT = STATE_WIDTH'(0);
-    localparam STATE_LEVENSHTEIN = STATE_WIDTH'(1);
-    localparam STATE_READ_VECTOR_BASE = STATE_WIDTH'(2);
+    localparam STATE_READ_DICT_BASE = STATE_WIDTH'(0);
+    localparam STATE_PROCESS = STATE_READ_DICT_BASE + STATE_WIDTH'(BURST_SIZE);
+    localparam STATE_LEVENSHTEIN = STATE_PROCESS + STATE_WIDTH'(1);
+    localparam STATE_READ_VECTOR_BASE = STATE_LEVENSHTEIN + STATE_WIDTH'(1);
 
     logic [STATE_WIDTH - 1 : 0] state;
-    logic [MASTER_ADDR_WIDTH - 1 : 0] dict_address;
+    logic [DICT_ADDR_WIDTH - 1 : 0] dict_address;
     logic cyc;
     logic [BITVECTOR_WIDTH - 1 : 0] pm;
     wire [BITVECTOR_WIDTH - 1 : 0] d0;
@@ -101,6 +108,11 @@ module levenshtein_controller
     logic [ID_WIDTH - 1 : 0] idx;
     logic [ID_WIDTH - 1 : 0] best_idx;
     logic [DISTANCE_WIDTH - 1 : 0] best_distance;
+
+    logic [BURST_SIZE * 8 - 1 : 0] symbols;
+    logic [SYMBOL_INDEX_WIDTH - 1 : 0] symbol_idx;
+    wire [7:0] next_symbol;
+    wire [7:0] symbol;
 
     integer i;
     integer j;
@@ -122,15 +134,41 @@ module levenshtein_controller
     assign initial_vp = (1 << word_length) - 1;
     assign mask = 1 << (word_length - 1);
 
+    assign next_symbol = symbols[7:0];
+    assign symbol = symbols[BURST_SIZE * 8 - 1 -: 8];
+
     always_comb begin
-        wbm_adr_o = dict_address;
+        wbm_adr_o = MASTER_ADDR_WIDTH'(0);
         wbm_cti_o = CTI_CLASSIC;
         wbm_bte_o = 2'b00;
 
+        for (i = 0; i != BURST_SIZE; i = i + 1) begin
+            if (state == STATE_READ_DICT_BASE + STATE_WIDTH'(i)) begin
+                if (BURST_SIZE == 1) begin
+                    wbm_adr_o = MASTER_ADDR_WIDTH'(dict_address);
+                end else begin
+                    wbm_adr_o = {dict_address, DICT_ADDR_SUFFIX_WIDTH'(i)};
+                end
+                if (BURST_SIZE == 1) begin
+                    wbm_cti_o = CTI_CLASSIC;
+                    wbm_bte_o = 2'b00;
+                end else if (i == BURST_SIZE - 1) begin
+                    wbm_cti_o = CTI_END_OF_BURST;
+                    wbm_bte_o = 2'b00;
+                end else begin
+                    wbm_cti_o = CTI_INCREMENTAL_BURST;
+                    wbm_bte_o = BTE_LINEAR_BURST;
+                end
+            end
+        end
+        
         for (i = 0; i != BITVECTOR_BYTES; i = i + 1) begin
             if (state == STATE_READ_VECTOR_BASE + STATE_WIDTH'(i)) begin
-                wbm_adr_o = MASTER_ADDR_WIDTH'({1'b1, pm[7:0], BITVECTOR_ADDR_SUFFIX_WIDTH'(i)});
-                if (BITVECTOR_BYTES > 1 && i == BITVECTOR_BYTES - 1) begin
+                wbm_adr_o = MASTER_ADDR_WIDTH'({1'b1, symbol, BITVECTOR_ADDR_SUFFIX_WIDTH'(i)});
+                if (BITVECTOR_BYTES == 1) begin
+                    wbm_cti_o = CTI_CLASSIC;
+                    wbm_bte_o = 2'b00;
+                end else if (i == BITVECTOR_BYTES - 1) begin
                     wbm_cti_o = CTI_END_OF_BURST;
                     wbm_bte_o = 2'b00;
                 end else begin
@@ -154,7 +192,7 @@ module levenshtein_controller
         endcase
     end
 
-    always_ff @ (posedge clk_i) begin
+    always @ (posedge clk_i) begin
         if (rst_i) begin
             enabled <= 1'b0;
             wbs_ack_o <= 1'b0;
@@ -165,7 +203,7 @@ module levenshtein_controller
             d <= DISTANCE_WIDTH'(0);
             vp <= BITVECTOR_WIDTH'(0);
             vn <= BITVECTOR_WIDTH'(0);
-            state <= STATE_READ_DICT;
+            state <= STATE_READ_DICT_BASE;
 
             idx <= ID_WIDTH'(0);
             best_idx <= ID_WIDTH'(0);
@@ -173,22 +211,27 @@ module levenshtein_controller
 
             word_length_reg <= WORD_LENGTH_REG_WIDTH'(0);
 
+            symbol_idx <= SYMBOL_INDEX_WIDTH'(0);
+
             sram_config <= 2'd0;
         end else begin
             if (wbs_cyc_i && wbs_stb_i && !wbs_ack_o) begin
                 if (wbs_we_i) begin
                     if (wbs_adr_i[2:0] == ADDR_CTRL) begin
                         enabled <= wbs_dat_i[0];
-                        state <= STATE_READ_DICT;
+                        if (!enabled) begin
+                            state <= STATE_READ_DICT_BASE;
 
-                        dict_address <= DICT_ADDR;
-                        d <= DISTANCE_WIDTH'(word_length);
-                        vn <= BITVECTOR_WIDTH'(0);
-                        vp <= initial_vp;
+                            dict_address <= DICT_ADDR;
+                            d <= DISTANCE_WIDTH'(word_length);
+                            vn <= BITVECTOR_WIDTH'(0);
+                            vp <= initial_vp;
 
-                        idx <= ID_WIDTH'(0);
-                        best_idx <= ID_WIDTH'(0);
-                        best_distance <= DISTANCE_WIDTH'(-1);
+                            idx <= ID_WIDTH'(0);
+                            best_idx <= ID_WIDTH'(0);
+                            best_distance <= DISTANCE_WIDTH'(-1);
+                            symbol_idx <= SYMBOL_INDEX_WIDTH'(0);
+                        end
                     end else if (wbs_adr_i[2:0] == ADDR_SRAM_CTRL) begin
                         sram_config <= wbs_dat_i[1:0];
                     end else if (wbs_adr_i[2:0] == ADDR_LENGTH) begin
@@ -201,31 +244,45 @@ module levenshtein_controller
             end
         
             if (enabled) begin
-                if (state == STATE_READ_DICT) begin
-                    if (!cyc) begin
-                        cyc <= 1'b1;
-                    end else if (wbm_ack_i) begin
-                        pm[7:0] <= wbm_dat_i;
-                        if (wbm_dat_i == WORD_TERMINATOR) begin
-                            if (d < best_distance) begin
-                                best_idx <= idx;
-                                best_distance <= d;
+                for (j = 0; j != BURST_SIZE; j = j + 1) begin
+                    if (state == STATE_READ_DICT_BASE + STATE_WIDTH'(j)) begin
+                        if (j == 0 && !cyc) begin
+                            cyc <= 1'b1;
+                        end else if (wbm_ack_i) begin
+                            symbols <= {wbm_dat_i, symbols[BURST_SIZE * 8 - 1 : 8]};
+                            if (j == BURST_SIZE - 1) begin
+                                cyc <= 1'b0;
+                                dict_address <= dict_address + DICT_ADDR_WIDTH'(1);
+                                state <= STATE_PROCESS;
+                            end else begin
+                                state <= STATE_READ_DICT_BASE + STATE_WIDTH'(j + 1);
                             end
-                            idx <= idx + ID_WIDTH'(1);
-                            d <= DISTANCE_WIDTH'(word_length);
-                            vn <= BITVECTOR_WIDTH'(0);
-                            vp <= initial_vp;
-                            state <= STATE_READ_DICT;
-                        end else if (wbm_dat_i == DICT_TERMINATOR) begin
+                        end else if (wbm_err_i || wbm_rty_i) begin
+                            cyc <= 1'b0;
                             enabled <= 1'b0;
-                        end else begin
-                            state <= STATE_READ_VECTOR_BASE;
                         end
-                        cyc <= 1'b0;
-                        dict_address <= dict_address + MASTER_ADDR_WIDTH'(1);
-                    end else if (wbm_err_i || wbm_rty_i) begin
-                        cyc <= 1'b0;
+                    end
+                end
+
+                if (state == STATE_PROCESS) begin
+                    symbol_idx <= symbol_idx + SYMBOL_INDEX_WIDTH'(1);
+                    symbols <= {symbols[7:0], symbols[BURST_SIZE * 8 - 1 : 8]};
+                    if (next_symbol == WORD_TERMINATOR) begin
+                        if (d < best_distance) begin
+                            best_idx <= idx;
+                            best_distance <= d;
+                        end
+                        idx <= idx + ID_WIDTH'(1);
+                        d <= DISTANCE_WIDTH'(word_length);
+                        vn <= BITVECTOR_WIDTH'(0);
+                        vp <= initial_vp;
+                        if (symbol_idx == SYMBOL_INDEX_WIDTH'(BURST_SIZE - 1)) begin
+                            state <= STATE_READ_DICT_BASE;
+                        end
+                    end else if (next_symbol == DICT_TERMINATOR) begin
                         enabled <= 1'b0;
+                    end else begin
+                        state <= STATE_READ_VECTOR_BASE;
                     end
                 end
 
@@ -260,7 +317,11 @@ module levenshtein_controller
                     end
                     vp <= next_vp;
                     vn <= next_vn;
-                    state <= STATE_READ_DICT;
+                    if (symbol_idx == SYMBOL_INDEX_WIDTH'(0)) begin
+                        state <= STATE_READ_DICT_BASE;
+                    end else begin
+                        state <= STATE_PROCESS;
+                    end
                 end
             end
         end
