@@ -2,7 +2,7 @@
 
 tt09-levenshtein is a fuzzy search engine which can find the best matching word in a dictionary based on levenshtein distance.
 
-Fundamentally its an implementation of the bit-vector levenshtein algorithm from Heikki Hyyrö's 2022 paper with the title *A Bit-Vector Algorithm for Computing Levenshtein and Damerau Edit Distances*.
+Fundamentally its an implementation of the bit-vector levenshtein algorithm from Heikki Hyyrö's 2003 paper with the title *A Bit-Vector Algorithm for Computing Levenshtein and Damerau Edit Distances*.
 
 ### Architecture
 
