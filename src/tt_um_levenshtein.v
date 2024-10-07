@@ -40,6 +40,8 @@ module tt_um_levenshtein
     wire [22:0] sram_adr;
     wire sram_we;
     wire [7:0] sram_dwr;
+    wire [2:0] sram_cti;
+    wire [1:0] sram_bte;
     wire sram_ack;
     wire sram_err;
     wire sram_rty;
@@ -49,8 +51,6 @@ module tt_um_levenshtein
 
     /* verilator lint_off UNUSEDSIGNAL */
     wire sram_sel;
-    wire [2:0] sram_cti;
-    wire [1:0] sram_bte;
     /* verilator lint_on UNUSEDSIGNAL */
 
     wire spi_sram_cyc;
@@ -116,7 +116,7 @@ module tt_um_levenshtein
         .dat_i(spi_drd)
     );
 
-    levenshtein_controller #(.MASTER_ADDR_WIDTH(23), .SLAVE_ADDR_WIDTH(3), .BITVECTOR_WIDTH(17)) levenshtein_ctrl (
+    levenshtein_controller #(.MASTER_ADDR_WIDTH(23), .SLAVE_ADDR_WIDTH(3), .BITVECTOR_WIDTH(16)) levenshtein_ctrl (
         .clk_i(clk),
         .rst_i(!rst_n),
 
