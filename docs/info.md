@@ -17,7 +17,9 @@ ultimately store the index and distance of the word in the dictionary with the l
 
 The device is organized as a wishbone bus which is accessed through commands on an SPI bus.
 
-The maximum SPI frequency is 25% of the master clock.
+The maximum SPI frequency is 25% of the master clock (12.5MHz when the chip is running at 50MHz).
+
+The bus uses SPI mode 3 (CPOL=1, CPHA=1)
 
 **Input bytes:**
 
@@ -66,8 +68,8 @@ The address space is basically as follows:
 | 0x000003 | 1    | R/O    | `MAX_LENGTH` |
 | 0x000004 | 2    | R/O    | `INDEX`      |
 | 0x000006 | 1    | R/O    | `DISTANCE`   |
-| 0x000400 | 768  | R/W    | `VECTORMAP`  |
-| 0x000800 | 8M   | R/W    | `DICT`       |
+| 0x000200 | 512  | R/W    | `VECTORMAP`  |
+| 0x000400 | 8M   | R/W    | `DICT`       |
 
 **CTRL**
 
@@ -107,7 +109,7 @@ The chip select flag controls which chip select is used on the PMOD when accessi
 | 0-7  | 8    | R/W    | Word length minus 1                                         |
 
 Used to indicate the length of the search word. Note that the word cannot be empty and it cannot
-exceed 20 characters.
+exceed 16 characters.
 
 **MAX_LENGTH**
 
@@ -131,27 +133,19 @@ The vector map must contain the corresponding bitvector for each input byte in t
 
 If the search word is `application`, the bit vectors will look as follows:
 
-| Letter | Index  | Bit vector                                   |
-|--------|--------|----------------------------------------------|
-| `a`    | `0x61` | `20'b0000_00000000_01000001` (`a_____a____`) |
-| `p`    | `0x70` | `20'b0000_00000000_00000110` (`_pp________`) |
-| `l`    | `0x6C` | `20'b0000_00000000_00001000` (`___l_______`) |
-| `i`    | `0x69` | `20'b0000_00000001_00010000` (`____i___i__`) |
-| `c`    | `0x63` | `20'b0000_00000000_00100000` (`_____c_____`) |
-| `t`    | `0x74` | `20'b0000_00000000_10000000` (`_______t___`) |
-| `o`    | `0x6F` | `20'b0000_00000010_00000000` (`_________o_`) |
-| `n`    | `0x6E` | `20'b0000_00000100_00000000` (`__________n`) |
-| *      | *      | `20'b0000_00000000_00000000` (`___________`) |
+| Letter | Index  | Bit vector                              |
+|--------|--------|-----------------------------------------|
+| `a`    | `0x61` | `16'b00000000_01000001` (`a_____a____`) |
+| `p`    | `0x70` | `16'b00000000_00000110` (`_pp________`) |
+| `l`    | `0x6C` | `16'b00000000_00001000` (`___l_______`) |
+| `i`    | `0x69` | `16'b00000001_00010000` (`____i___i__`) |
+| `c`    | `0x63` | `16'b00000000_00100000` (`_____c_____`) |
+| `t`    | `0x74` | `16'b00000000_10000000` (`_______t___`) |
+| `o`    | `0x6F` | `16'b00000010_00000000` (`_________o_`) |
+| `n`    | `0x6E` | `16'b00000100_00000000` (`__________n`) |
+| *      | *      | `16'b00000000_00000000` (`___________`) |
 
-Each vector represents 20 bits, stored as a 24-bit vector, aligned to 32 bits.
-
-Example based on the `application` bit vectors:
-
-| Address | Letter       | Bytes         |
-|---------|--------------|---------------|
-| 000584  | `a` (U+0061) | `x0 00 61 xx` |
-| 000588  | `b` (U+0062) | `x0 00 00 xx` |
-| 00058C  | `c` (U+0063) | `x0 00 20 xx` |
+Each vector represents 16 bits
 
 The vectormap is stored in SRAM so the values are indetermined at power up and must be cleared.
 
@@ -178,10 +172,10 @@ Next, you can run the test tool:
 
 ```sh
 # Machdyne QQSPI PSRAM
-./build/client/client --device tt --cs cs --test
+./build/client/client --interface tt --cs cs --test --verify-dictionary --verify-search
 
 # mole99 PSRAM
-./build/client/client --device tt --cs cs2 --test
+./build/client/client --interface tt --cs cs2 --test --verify-dictionary --verify-search
 ```
 
 This will load 1024 words of random length and characters into the SRAM and then perform a bunch of searches, verifying that the returned result is correct.
@@ -194,6 +188,6 @@ To operate, the device needs an QSPI PSRAM PMOD. The design is tested with the Q
 * FAST READ QUAD with the command `0xE8` in 1S-4S-4S mode and 6 wait cycles
 * 24-bit addresses
 * Uses pin 0, 6, or 7 for `SS#`.
-* Must be able to run at half the clock speed of the chip.
+* Must be able to run at half the clock speed of the TT chip.
 
 Note that this makes it incompatible with the spi-ram-emu project for the RP2040.
