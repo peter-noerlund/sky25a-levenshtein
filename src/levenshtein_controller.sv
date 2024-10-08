@@ -198,22 +198,6 @@ module levenshtein_controller
             wbs_ack_o <= 1'b0;
 
             cyc <= 1'b0;
-
-            dict_address <= DICT_ADDR;
-            d <= DISTANCE_WIDTH'(0);
-            vp <= BITVECTOR_WIDTH'(0);
-            vn <= BITVECTOR_WIDTH'(0);
-            state <= STATE_READ_DICT_BASE;
-
-            idx <= ID_WIDTH'(0);
-            best_idx <= ID_WIDTH'(0);
-            best_distance <= DISTANCE_WIDTH'(-1);
-
-            word_length_reg <= WORD_LENGTH_REG_WIDTH'(0);
-
-            symbol_idx <= SYMBOL_INDEX_WIDTH'(0);
-
-            sram_config <= 2'd0;
         end else begin
             if (wbs_cyc_i && wbs_stb_i && !wbs_ack_o) begin
                 if (wbs_we_i) begin
