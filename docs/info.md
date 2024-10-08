@@ -125,7 +125,7 @@ When the engine has finished executing, this address contains the levenshtein di
 
 **INDEX**
 
-When the engine has finished executing, this address contains the index of the best word from the dictionary.
+When the engine has finished executing, this address contains the index of the best word from the dictionary in big endian byte order.
 
 **VECTORMAP**
 
@@ -145,7 +145,7 @@ If the search word is `application`, the bit vectors will look as follows:
 | `n`    | `0x6E` | `16'b00000100_00000000` (`__________n`) |
 | *      | *      | `16'b00000000_00000000` (`___________`) |
 
-Each vector represents 16 bits
+Each vector is 16 bits in bit endian byte order.
 
 The vectormap is stored in SRAM so the values are indetermined at power up and must be cleared.
 
@@ -172,7 +172,7 @@ Next, you can run the test tool:
 
 ```sh
 # Machdyne QQSPI PSRAM
-./build/client/client --interface tt --cs cs --test --verify-dictionary --verify-search
+./build/client/client --interface tt --test --verify-dictionary --verify-search
 
 # mole99 PSRAM
 ./build/client/client --interface tt --cs cs2 --test --verify-dictionary --verify-search
@@ -182,7 +182,7 @@ This will load 1024 words of random length and characters into the SRAM and then
 
 ## External hardware
 
-To operate, the device needs an QSPI PSRAM PMOD. The design is tested with the QQSPI PSRAM PMOD from Machdyne, but any memory PMOD will work as long as it supports:
+To operate, the device needs a QSPI PSRAM PMOD. The design is tested with the QQSPI PSRAM PMOD from Machdyne, but any memory PMOD will work as long as it supports:
 
 * WRITE QUAD with the command `0x38` in 1S-4S-4S mode and no latency
 * FAST READ QUAD with the command `0xE8` in 1S-4S-4S mode and 6 wait cycles
