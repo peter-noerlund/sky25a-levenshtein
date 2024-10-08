@@ -34,9 +34,6 @@
   "//": "Fix transition constraint",
   "MAX_TRANSITION_CONSTRAINT": 1.5,
 
-  "//": "Fix slew and cap violations",
-  "DEFAULT_CORNER": "max_ss_100C_1v60",
-  
   "//": "Configuration docs: https://openlane.readthedocs.io/en/latest/reference/configuration.html",
 
   "//": "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!",
