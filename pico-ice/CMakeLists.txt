@@ -19,7 +19,7 @@ if(yosys_FOUND AND icestorm_FOUND AND nextpnr_FOUND)
 
     add_custom_command(
         OUTPUT pico-ice.json
-        COMMAND ${YOSYS_PATH} -q -p "synth_ice40 -device u -top top -json pico-ice.json" ${VERILOG_SOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/top.sv pico-ice-pll.v
+        COMMAND ${YOSYS_PATH} -q -p "synth_ice40 -device u -top top -spram -dsp -json pico-ice.json" -l pico-ice.log ${VERILOG_SOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/top.sv pico-ice-pll.v
         DEPENDS ${VERILOG_SOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/top.sv pico-ice-pll.v
     )
 
