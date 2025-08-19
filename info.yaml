@@ -1,9 +1,9 @@
 # Tiny Tapeout project information
 project:
-  title:        "Fuzzy Search Engine"      # Project title
-  author:       "Peter Nørlund"      # Your name
-  discord:      "pchri03."      # Your discord username, for communication and automatically assigning you a Tapeout role (optional)
-  description:  "A levenshtein based fuzzy search engine"      # One line description of what your project does
+  title:        "Fuzzy Search Engine"                         # Project title
+  author:       "Peter Nørlund"                               # Your name
+  discord:      "pchri03."                                    # Your discord username, for communication and automatically assigning you a Tapeout role (optional)
+  description:  "A levenshtein based fuzzy search engine"     # One line description of what your project does
   language:     "SystemVerilog" # other examples include SystemVerilog, Amaranth, VHDL, etc
   clock_hz:     50000000 # Clock frequency in Hz (or 0 if not applicable)
 
