@@ -4,6 +4,8 @@
 #include <unicode/schriter.h>
 #include <unicode/stringpiece.h>
 
+#include <cstdint>
+
 namespace tt09_levenshtein
 {
 
