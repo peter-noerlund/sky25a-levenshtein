@@ -25,7 +25,7 @@ add_executable(client
 )
 target_include_directories(client PRIVATE client)
 target_compile_features(client PRIVATE cxx_std_20)
-target_compile_options(client PRIVATE -Wall -W -Wextra -Wno-unused-parameter)
+target_compile_options(client PRIVATE -Wall -W -Wextra -Wno-unused-parameter -Wno-unused-variable -Wno-free-nonheap-object -Wno-sign-compare)
 target_link_libraries(client PRIVATE
     asio::asio
     fmt::fmt-header-only
