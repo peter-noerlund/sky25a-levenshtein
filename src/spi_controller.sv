@@ -101,7 +101,9 @@ module spi_controller
                 sio_out[0] <= we_i ? write_command[7] : read_command[7];
             end
             if (!ss_n) begin
+                /* verilator lint_off SYNCASYNCNET */
                 sck <= ~sck;
+                /* verilator lint_on SYNCASYNCNET */
             end
             if (sck) begin
                 if (bit_counter <= 5'd6) begin
