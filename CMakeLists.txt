@@ -10,14 +10,14 @@ find_package(Python COMPONENTS Interpreter REQUIRED)
 add_custom_command(
     OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/src/user_config.json
     COMMAND . venv/bin/activate && tt/tt_tool.py --create-user-config
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/config.json ${CMAKE_CURRENT_SOURCE_DIR}/info.yaml ${CMAKE_CURRENT_SOURCE_DIR}/tt/tt_tool.py
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/config.json ${CMAKE_CURRENT_SOURCE_DIR}/info.yaml ${CMAKE_CURRENT_SOURCE_DIR}/tt/tt_tool.py ${CMAKE_CURRENT_SOURCE_DIR}/venv/bin/python
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 add_custom_command(
     OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/tt/tt_tool.py
-    COMMAND ${GIT_EXECUTABLE} checkout ttsky25a
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tt
+    COMMAND ${GIT_EXECUTABLE} clone -b ttsky25a https://github.com/TinyTapeout/tt-support-tools tt
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 add_custom_command(
@@ -71,8 +71,8 @@ add_custom_target(
 
 add_custom_command(
     OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/test/gate_level_netlist.v
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/runs/wokwi/final/pnl/tt_um_levenshtein.pnl.v
-    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/runs/wokwi/final/pnl/tt_um_levenshtein.pnl.v ${CMAKE_CURRENT_SOURCE_DIR}/test/gate_level_netlist.v
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/runs/wokwi/final/pnl/tt_um_pchri03_levenshtein.pnl.v
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/runs/wokwi/final/pnl/tt_um_pchri03_levenshtein.pnl.v ${CMAKE_CURRENT_SOURCE_DIR}/test/gate_level_netlist.v
 )
 
 add_custom_target(

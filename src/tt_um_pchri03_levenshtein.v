@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2024 Your Name
+ * Copyright (c) 2025 Peter Nørlund
  * SPDX-License-Identifier: Apache-2.0
  */
 
 `default_nettype none
 
-module tt_um_levenshtein
+module tt_um_pchri03_levenshtein
     /* verilator lint_off UNUSEDSIGNAL */
     (
         input  wire [7:0] ui_in,    // Dedicated inputs
