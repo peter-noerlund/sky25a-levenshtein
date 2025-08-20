@@ -54,6 +54,7 @@ module spi_wishbone_bridge
             miso <= 1'b0;
             counter <= 5'd0;
             state <= STATE_COMMAND;
+            buffer <= 32'h00000000;
             cyc <= 1'b0;
         end else begin
             case (state)
