@@ -1,6 +1,6 @@
 ## How it works
 
-tt09-levenshtein is a fuzzy search engine which can find the best matching word in a dictionary based on levenshtein distance.
+sky25a-levenshtein is a fuzzy search engine which can find the best matching word in a dictionary based on levenshtein distance.
 
 Fundamentally its an implementation of the bit-vector levenshtein algorithm from Heikki Hyyrö's 2003 paper with the title *A Bit-Vector Algorithm for Computing Levenshtein and Damerau Edit Distances*.
 
@@ -56,9 +56,7 @@ AD 00   1 01011010 00000000
 
 ### Memory Layout
 
-As indicated by the SPI protocol, the address space is 23 bits.
-
-The address space is basically as follows:
+The address space is 23 bits and is organized as follows:
 
 | Address  | Size | Access | Identifier   |
 |----------|------|--------|--------------|
@@ -109,7 +107,7 @@ The chip select flag controls which chip select is used on the PMOD when accessi
 | 0-7  | 8    | R/W    | Word length minus 1                                         |
 
 Used to indicate the length of the search word. Note that the word cannot be empty and it cannot
-exceed 16 characters.
+exceed the maximum length as indicated by the `MAX_LENGTH` field.
 
 **MAX_LENGTH**
 
@@ -117,7 +115,7 @@ exceed 16 characters.
 |------|------|--------|-----------------------------------|
 | 0-7  | 8    | R/O    | Max word length supported minus 1 |
 
-This field allows for applications to dynamically detect the size of the bit vector.
+This field indicates the maximum supported length of the engine.
 
 **DISTANCE**
 
@@ -145,9 +143,9 @@ If the search word is `application`, the bit vectors will look as follows:
 | `n`    | `0x6E` | `16'b00000100_00000000` (`__________n`) |
 | *      | *      | `16'b00000000_00000000` (`___________`) |
 
-Each vector is 16 bits in bit endian byte order.
+The size of the vectors is `MAX_LENGTH` bits rounded up to the nearest 8. The vectors are stored in big endian order.
 
-The vectormap is stored in SRAM so the values are indetermined at power up and must be cleared.
+The vector map is stored in SRAM so the values are indetermined at power up and must be cleared.
 
 **DICT**
 
