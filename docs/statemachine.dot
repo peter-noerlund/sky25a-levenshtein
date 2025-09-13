@@ -1,0 +1,37 @@
+digraph statemachine {
+    rankdir=TB;
+    node [ fontname="arial" fontsize="8" shape="rect" style="rounded" ];
+    edge [ fontname="arial" fontsize="8" ];
+
+    {
+        rank=source;
+        start [ shape="circle" label="" fillcolor="black" style="filled" fixedsize="true" width=0.1 height=0.1 ];
+    }
+
+    STATE_READ_DICT_BASE0 [ label="STATE_READ_DICT_BASE + 0" ];
+    STATE_READ_DICT_BASE1 [ label="STATE_READ_DICT_BASE + 1" ];
+    STATE_READ_DICT_BASE2 [ label="STATE_READ_DICT_BASE + 2" ];
+    STATE_READ_DICT_BASE3 [ label="STATE_READ_DICT_BASE + 3" ];
+    STATE_PROCESS;
+    STATE_READ_VECTOR_BASE0 [ label="STATE_READ_VECTOR_BASE + 0" ];
+    STATE_READ_VECTOR_BASE1 [ label="STATE_READ_VECTOR_BASE + 1" ];
+    STATE_LEVENSHTEIN;
+
+    {
+        rank=sink;
+        exit [ shape="doublecircle" label="" fillcolor="black" style="filled"  fixedsize="true" width=0.1 height=0.1 ];
+    }
+
+    start -> STATE_READ_DICT_BASE0 [ label="enabled=1" ];
+    STATE_READ_DICT_BASE0 -> STATE_READ_DICT_BASE1 [ label="wbm_ack_i=1" ];
+    STATE_READ_DICT_BASE1 -> STATE_READ_DICT_BASE2 [ label="wbm_ack_i=1" ];
+    STATE_READ_DICT_BASE2 -> STATE_READ_DICT_BASE3 [ label="wbm_ack_i=1" ];
+    STATE_READ_DICT_BASE3 -> STATE_PROCESS [ label="wbm_ack_i=1" ];
+    STATE_PROCESS -> STATE_READ_DICT_BASE0 [ label="next_symbol=WORD_TERMINATOR && symbol_idx=3" ];
+    STATE_PROCESS -> exit [ label="next_symbol=DICT_TERMINATOR" ]
+    STATE_PROCESS -> STATE_READ_VECTOR_BASE0;
+    STATE_READ_VECTOR_BASE0 -> STATE_READ_VECTOR_BASE1 [ label="wbm_ack_i=1" ];
+    STATE_READ_VECTOR_BASE1 -> STATE_LEVENSHTEIN [ label="wbm_ack_i=1" ];
+    STATE_LEVENSHTEIN -> STATE_PROCESS;
+    STATE_LEVENSHTEIN -> STATE_READ_DICT_BASE0 [ label="symbol_idx=3"];
+}

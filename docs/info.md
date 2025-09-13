@@ -156,6 +156,71 @@ The word list is stored of a sequence of words, each encoded as a sequence of 8-
 Note that the algorithm doesn't care about the particular characters. It only cares if they are identical or not, so even though the algorithm doesn't support UTF-8 and is limited to a character set of 254 characters,
 ignoring Asian alphabets, a list of words usually don't contain more than 254 distinct characters, so you can practially just map lettters to a value between 2 and 255.
 
+## Levenshtein module
+
+The levenshtein module is a state machine with 8 states:
+
+![image](statemachine.png)
+
+### `STATE_READ_DICT_BASE + n`
+
+At these states, four dictionary bytes are read from the PMOD PSRAM via the wishbone bus as indicated by `dict_address`.
+
+The bytes are stored in a `symbols` buffer.
+
+### `STATE_PROCESS`
+
+At this state each symbol in the `symbols` buffer is processed one byte per cycle. The symbol being processed is indicated by `symbol_idx`.
+
+If the symbol processed is `WORD_TERMINATOR` (`0x00`) the `best_idx` and `best_distance` variables are updated and the bitvector engine is reset. If it was the last symbol, state changes to `STATE_READ_DICT_BASE + 0`.
+
+If the symbol processed is `DICT_TERMINATOR` (`0x01`), the engine disables itself.
+
+If the symbol is neigher `WORD_TERMINATOR` or `DICT_TERMINATOR`, the state changes to `STATE_READ_VECTOR_BASE + 0`.
+
+### `STATE_READ_VECTOR_BASE + n`
+
+At these states a 16-bit vector is read from the PMOD SRAM in 8-bit chunks, representing the symbol being processed.
+
+When both bytes has been read, state changes to `STATE_LEVENSHTEIN`
+
+### `STATE_LEVENSHTEIN`
+
+At this state, the bitvector based levenshtein algorithm is run.
+
+If it was the last symbol in the symbol buffer, state changes to `STATE_READ_DICT_BASE + 0` - otherwise, state changes to `STATE_PROCESS`.
+
+### Summary
+
+Unless the terminator symbols are reached, the states are:
+
+* `STATE_READ_DICT_BASE + 0`
+* `STATE_READ_DICT_BASE + 1`
+* `STATE_READ_DICT_BASE + 2`
+* `STATE_READ_DICT_BASE + 3`
+* `STATE_PROCESS, symbol_idx=0`
+* `STATE_READ_VECTOR_BASE + 0`
+* `STATE_READ_VECTOR_BASE + 1`
+* `STATE_LEVENSHTEIN`
+* `STATE_PROCESS, symbol_idx=1`
+* `STATE_READ_VECTOR_BASE + 0`
+* `STATE_READ_VECTOR_BASE + 1`
+* `STATE_LEVENSHTEIN`
+* `STATE_PROCESS, symbol_idx=2`
+* `STATE_READ_VECTOR_BASE + 0`
+* `STATE_READ_VECTOR_BASE + 1`
+* `STATE_LEVENSHTEIN`
+* `STATE_PROCESS, symbol_idx=3`
+* `STATE_READ_VECTOR_BASE + 0`
+* `STATE_READ_VECTOR_BASE + 1`
+* `STATE_LEVENSHTEIN`
+* `STATE_READ_DICT_BASE + 0`
+* ...
+
+Reading from the PMOD PSRAM is done at half the frequency in 1S-4S-4S mode with 6 wait cycles, so going from `STATE_READ_x_BASE + 0` to `STATE_READ_x_BASE + 1` takes 44 cycles (`(8 + 24/4 + 6 + 8/4) * 2 = 44`) and the remaining states takes 4 cycles (`(8 / 4) * 2 = 4`). So processing 4 bytes of dictionary symbols takes 256 cycles (`44 + 4 + 4 + 4 + (1 + 44 + 4 + 1) * 4 = 256`) or 64 cycles/symbol.
+
+Assuming a 512KiB dictionary and 50MHz clock, searching takes up to 671ms.
+
 ## How to test
 
 You can compile the client as follows:
