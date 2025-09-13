@@ -19,8 +19,8 @@ int main(int argc, char** argv)
     tt09_levenshtein::Runner::Config config;
 
     auto cli = lyra::cli()
-        | lyra::opt(interfaceName, "DEVICE")["-i"]["--interface"]("Interface").choices("verilator", "icestick")
-        | lyra::opt(chipSelectName, "PIN")["-c"]["--chip-select"]("Memory chip select pin").choices("cs", "cs2", "cs3")
+        | lyra::opt(interfaceName, "DEVICE")["-i"]["--interface"]("Interface (verilator, icestick)").choices("verilator", "icestick")
+        | lyra::opt(chipSelectName, "PIN")["-c"]["--chip-select"]("Memory chip select pin (cs, cs2, cs3)").choices("cs", "cs2", "cs3")
         | lyra::opt(vcdPath, "FILE")["-v"]["--vcd-file"]("Create VCD file")
         | lyra::opt(config.dictionaryPath, "FILE")["-d"]["--dictionary"]("Dictionary")
         | lyra::opt(config.noClear)["--no-clear"]("Skip clearing vector map on initialization")
