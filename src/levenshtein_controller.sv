@@ -2,10 +2,10 @@
 
 module levenshtein_controller
     #(
-        parameter MASTER_ADDR_WIDTH=24,
-        parameter SLAVE_ADDR_WIDTH=24,
-        parameter BITVECTOR_WIDTH=16,
-        parameter BURST_SIZE=4
+        parameter int unsigned MASTER_ADDR_WIDTH=24,
+        parameter int unsigned SLAVE_ADDR_WIDTH=24,
+        parameter int unsigned BITVECTOR_WIDTH=16,
+        parameter int unsigned BURST_SIZE=4
     )
     (
         input wire clk_i,
